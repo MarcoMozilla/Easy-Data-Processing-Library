@@ -1,0 +1,33 @@
+
+set operator
+
+s.add(e)       		single element
+s.update([4,5], {1,6,8})	multi element
+
+s.discard(e)		not find no exception
+s.remove(e)		not find has exception
+
+s.pop(e)			random remove an element
+
+s.clear()                                	remove all
+
+
+Operations
+
+
+A | B		A.union(B)
+
+A & B		A.intersection(B)
+
+
+A - B		A.difference(B)
+
+A^B		A.symmetric_difference(B)	#like xor
+
+issubset()
+issuperset()
+isdisjoint()
+
+
+e in set		check element in set
+
