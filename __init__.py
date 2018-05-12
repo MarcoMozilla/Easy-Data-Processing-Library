@@ -1,3 +1,0 @@
-
-
-from .table import*
