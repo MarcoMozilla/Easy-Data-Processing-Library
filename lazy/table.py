@@ -44,7 +44,7 @@ class Table:
         self.name = name
         self.array2d = []
         self.lenmap = []
-        self.sepmap = []  #track seperate seperate symbol
+        self.sepmap = []  # track seperate seperate symbol
         self.colmap = {}
         self.keymap = None
         self.groupmap = None
@@ -53,9 +53,9 @@ class Table:
         if not array2d:
             pass
         elif isinstance(array2d, list):
-            good=True
+            good = True
             for v in array2d:
-                if not isinstance(v,list):
+                if not isinstance(v, list):
                     good = False
             if good:
                 self.array2d = array2d
@@ -68,21 +68,21 @@ class Table:
         else:
             raise Exception("array2d should be 2D-list")
 
-    def setsepmap(self,j=None,sep ='\n'):
+    def setsepmap(self, j=None, sep='\n'):
         if j is None:
             n = wid(self)
-            self.sepmap = inilist(n,'\n')
+            self.sepmap = inilist(n, '\n')
         else:
             self.sepmap[j] = sep
             self.setlenmapj(j)
 
-    def init(head,i,name= None):
-        #error!!!!
-        if isinstance(head,str) or isinstance(head,list):
-            if isinstance(head,str):
-                head= slist(head)
-            array2d = inilist2d(i,len(head))
-            result = Table([head]+array2d)
+    def init(head, i, name=None):
+        # error!!!!
+        if isinstance(head, str) or isinstance(head, list):
+            if isinstance(head, str):
+                head = slist(head)
+            array2d = inilist2d(i, len(head))
+            result = Table([head] + array2d)
             if name:
                 result.name = name
             return result
@@ -91,13 +91,13 @@ class Table:
 
     def recapcolindex(self, j):
         j = wid(self) + j if j < 0 else j
-        if j < 0 or j > wid(self): 
+        if j < 0 or j > wid(self):
             raise Exception("invalid col index")
         return j
 
     def addcol(self, j=-1):
 
-        j = self.recapcolindex(j)+1 if j<0 else j
+        j = self.recapcolindex(j) + 1 if j < 0 else j
         # track colmap
         top = self.array2d[0]
         for i in range(j, wid(self)):
@@ -112,7 +112,7 @@ class Table:
         # track lenmap
         self.lenmap.insert(j, 4)
 
-    def addcols(self,n,i=-1):
+    def addcols(self, n, i=-1):
         for x in range(n):
             self.addcol(i)
 
@@ -126,9 +126,9 @@ class Table:
         # track colmap
         top = self.array2d[0]
         for i in range(j, wid(self)):
-            #print("j=", j)
+            # print("j=", j)
             key = top[i]
-            #print("key = ", key)
+            # print("key = ", key)
             self.colmap[key] -= 1
         del self.colmap[top[j]]
         # tack bindmap
@@ -146,7 +146,7 @@ class Table:
         return i
 
     def addrow(self, i=-1):
-        i = self.recaprowindex(i)+1 if i<0 else i
+        i = self.recaprowindex(i) + 1 if i < 0 else i
         if i == 0:
             raise Exception("invalid row index")
         if self.keymap is not None:
@@ -158,7 +158,7 @@ class Table:
         self.array2d.insert(i, newrow)
         self.setlenmapi(i)
 
-    def addrows(self,n,i=-1):
+    def addrows(self, n, i=-1):
         for x in range(n):
             self.addrow(i)
 
@@ -171,9 +171,8 @@ class Table:
         if self.groupmap is not None:
             self.groupmap.trackdelrow(i)
         # track bindmap
-        row =self.array2d.pop(i)
+        row = self.array2d.pop(i)
         self.recaplenmap(row)
-
 
     def setentry(self, i, j, value):
         i = len(self) + 1 + i if i < 0 else i
@@ -210,17 +209,15 @@ class Table:
     def shuffle(self):
         if self.bindmap is not None:
             raise Exception("debind self all for shuffle")
-        groupmap =self.groupmap
-        keymap =self.keymap
+        groupmap = self.groupmap
+        keymap = self.keymap
         head = self.array2d.pop(0)
         shuffle(self.array2d)
-        self.array2d.insert(0,head)
+        self.array2d.insert(0, head)
         if groupmap is not None:
             self.setgroup(groupmap.group)
         if keymap is not None:
             self.setkey(keymap.key)
-
-
 
     def setkey(self, s):
         self.delkey()
@@ -247,28 +244,28 @@ class Table:
     def setlenmap(self):
         lenmap = []
         for i in range(wid(self)):
-            lenmap.append(max([maxlen(v[i],self.sepmap[i]) for v in self.array2d]))
+            lenmap.append(max([maxlen(v[i], self.sepmap[i]) for v in self.array2d]))
         self.lenmap = lenmap
 
     def recaplenmap(self, row):
-        #recap lenmap by delete row
+        # recap lenmap by delete row
         for j in range(wid(self)):
-            if maxlen(row[j],self.sepmap[j]) == self.lenmap[j]:
-                self.lenmap[j] = max([maxlen(v[j],self.sepmap[j]) for v in self.array2d])
+            if maxlen(row[j], self.sepmap[j]) == self.lenmap[j]:
+                self.lenmap[j] = max([maxlen(v[j], self.sepmap[j]) for v in self.array2d])
 
-    def setlenmapj(self,j):
-        #set lenmap by col
-        self.lenmap[j] = max([maxlen(v[j],self.sepmap[j]) for v in self.array2d])
+    def setlenmapj(self, j):
+        # set lenmap by col
+        self.lenmap[j] = max([maxlen(v[j], self.sepmap[j]) for v in self.array2d])
 
     def setlenmapi(self, i):
-        #set lenmap by row
+        # set lenmap by row
         row = self.array2d[i]
         for j in range(wid(self)):
-            self.lenmap[j] = max(self.lenmap[j], maxlen(row[j],self.sepmap[j]))
+            self.lenmap[j] = max(self.lenmap[j], maxlen(row[j], self.sepmap[j]))
 
     def setlenmapij(self, i, j):
-        #refresh entry i,j
-        self.lenmap[j] = max(self.lenmap[j], maxlen(self.array2d[i][j],self.sepmap[j]))
+        # refresh entry i,j
+        self.lenmap[j] = max(self.lenmap[j], maxlen(self.array2d[i][j], self.sepmap[j]))
 
     def setcolmap(self):
         head = self.gethead()
@@ -288,8 +285,8 @@ class Table:
         self.imap.append(0);
         return self
 
-    def modicolinput(self,key):
-        if isinstance(key,int) or isinstance(key,str):
+    def modicolinput(self, key):
+        if isinstance(key, int) or isinstance(key, str):
             index = None
             if isinstance(key, int):
                 index = self.recapcolindex(key)
@@ -297,13 +294,13 @@ class Table:
                 index = self.colmap[key]
         return index
 
-    def apply(self,key,f,*args,para=False):
+    def apply(self, key, f, *args, para=False):
         j = self.modicolinput(key)
         if para:
-            for i in range(1,len(self)+1):
-                self[i][j] = f(self[i][j],*args)
+            for i in range(1, len(self) + 1):
+                self[i][j] = f(self[i][j], *args)
         else:
-            for i in range(1,len(self)+1):
+            for i in range(1, len(self) + 1):
                 self[i][j] = f(*args)
         self.setlenmapj(j)
 
@@ -311,15 +308,15 @@ class Table:
         return a in self.colmap
 
     def __getitem__(self, key):
-        if isinstance(key,int) or isinstance(key,str):
+        if isinstance(key, int) or isinstance(key, str):
             index = None
             if isinstance(key, int):
                 index = self.recaprowindex(key)
             elif isinstance(key, str):
                 index = self.str2index(key)
-            #return a Row
-            return Row(self,index)
-                 
+            # return a Row
+            return Row(self, index)
+
         elif isinstance(key, slice) or isinstance(key, tuple) or isinstance(key, list):
             ls = None
             if isinstance(key, slice):
@@ -327,7 +324,7 @@ class Table:
                 eindex = len(self) if key.stop is None else key.stop
                 sindex = self.recaprowindex(sindex)
                 eindex = self.recaprowindex(eindex)
-                ls = list(range(sindex, eindex+1))
+                ls = list(range(sindex, eindex + 1))
             elif isinstance(key, tuple) or isinstance(key, list):
                 ls = []
                 for v in key:
@@ -335,9 +332,9 @@ class Table:
                         ls.append(self.str2index(v))
                     elif isinstance(v, int):
                         ls.append(self.recaprowindex(v))
-            #ls done start make a Rows
-            return Rows(self,ls)
-        
+            # ls done start make a Rows
+            return Rows(self, ls)
+
         pass
 
     def __setitem__(self, key, value):
@@ -368,7 +365,7 @@ class Table:
                 eindex = len(self) if key.stop is None else key.stop
                 sindex = self.recaprowindex(sindex)
                 eindex = self.recaprowindex(eindex)
-                ls = list(range(sindex, eindex+1))
+                ls = list(range(sindex, eindex + 1))
             elif isinstance(key, tuple) or isinstance(key, list):
                 ls = []
                 for v in key:
@@ -379,20 +376,20 @@ class Table:
             # start assign
             if isinstance(value, list) or isinstance(value, tuple):
 
-                if isinstance(value[0],list) or isinstance(value[0],tuple):
+                if isinstance(value[0], list) or isinstance(value[0], tuple):
                     # 2D - array
                     # check length
                     if len(value) != len(ls):
                         raise Exception("length not mapping")
-                    #check length
+                    # check length
                     for v in value:
                         if len(v) != wid(self):
                             raise Exception("width not mapping")
                     vindex = 0
                     for index in ls:
                         for j in range(wid(self)):
-                            self.setentry(index,j,value[vindex][j])
-                        vindex +=1
+                            self.setentry(index, j, value[vindex][j])
+                        vindex += 1
                 else:
                     # 1D - array
                     # check width
@@ -400,13 +397,12 @@ class Table:
                         raise Exception("width not mapping")
                     for index in ls:
                         for j in range(wid(self)):
-                            self.setentry(index,j,value[j])
+                            self.setentry(index, j, value[j])
             else:
                 # single value
                 for index in ls:
                     for j in range(wid(self)):
                         self.setentry(index, j, value)
-
 
             pass
 
@@ -492,46 +488,39 @@ class Table:
 
     def row2str(self, v, sep="|"):
 
-        seplist= inilist(wid(self),None)
+        seplist = inilist(wid(self), None)
         for j in range(wid(self)):
+            seplist[j] = strsep2list(str(v[j]), self.sepmap[j], self.lenmap[j])
 
-            seplist[j]= strsep2list(str(v[j]),self.sepmap[j],self.lenmap[j])
-
-        #pprint(seplist)
         m = max(len(v) for v in seplist)
-
 
         for j in range(wid(self)):
             dis = m - len(seplist[j])
-            seplist[j]+= inilist(dis,"")
+            seplist[j] += inilist(dis, "")
 
-        #pprint(seplist)
 
         for j in range(wid(self)):
             for i in range(m):
-                seplist[j][i] = Table.spacing(seplist[j][i],self.lenmap[j])
+                seplist[j][i] = Table.spacing(seplist[j][i], self.lenmap[j])
 
-        #pprint(seplist)
         ls = []
         for i in range(m):
             ls.append(sep.join([seplist[j][i] for j in range(wid(self))]))
 
-        #pprint(ls)
         return '\n'.join(ls)
 
-
-    def head2str(self,sep="|"):
+    def head2str(self, sep="|"):
         head = self.gethead()
 
         ls = []
         for i in range(len(head)):
             s = str(head[i])
             if self.keymap is not None and head[i] in self.keymap.key:
-                    s += Keymap.symbol
+                s += Keymap.symbol
             if self.groupmap is not None and head[i] in self.groupmap.group:
-                    s += Groupmap.symbol
+                s += Groupmap.symbol
             ls.append(s)
-        return self.row2str(ls,sep)
+        return self.row2str(ls, sep)
 
     def __str__(self):
         s = ""
@@ -550,26 +539,25 @@ class Table:
         print(str(len(self.array2d)) + " row(s)", end="")
 
     def printi(self):
-        itable = list(range(len(self)+1))
-        itable =Table(rotlist12(itable))
-        jtable = [[self.name]+list(range(0,wid(self)))]
-        jtable =Table(jtable)
-        first = max(jtable.lenmap[0],itable.lenmap[0])
-        jtable.lenmap[0]=first
-        itable.lenmap[0]=first
-        for i in range(1,len(jtable.lenmap)):
-            jtable.lenmap[i]= max(jtable.lenmap[i],self.lenmap[i-1])
+        itable = list(range(len(self) + 1))
+        itable = Table(rotlist12(itable))
+        jtable = [[self.name] + list(range(0, wid(self)))]
+        jtable = Table(jtable)
+        first = max(jtable.lenmap[0], itable.lenmap[0])
+        jtable.lenmap[0] = first
+        itable.lenmap[0] = first
+        for i in range(1, len(jtable.lenmap)):
+            jtable.lenmap[i] = max(jtable.lenmap[i], self.lenmap[i - 1])
 
         sep = ":"
-        s =""
-        s+=jtable.head2str(sep)+"\n"
-        s+=itable.head2str()+sep+self.head2str()+"\n"
-        for i in range(1,len(self)+1):
-            s+=itable.row2str(itable.array2d[i])+sep
-            s+=self.row2str(self.array2d[i])+"\n"
-        s=s[:-1]
+        s = ""
+        s += jtable.head2str(sep) + "\n"
+        s += itable.head2str() + sep + self.head2str() + "\n"
+        for i in range(1, len(self) + 1):
+            s += itable.row2str(itable.array2d[i]) + sep
+            s += self.row2str(self.array2d[i]) + "\n"
+        s = s[:-1]
         print(s)
-
 
     def __repr__(self):
 
@@ -592,8 +580,8 @@ class Table:
             raise KeyError("only int or str is supported")
 
     def getrowindex(self, key):
-        if self.key is not None and self.keymap is not None:
-            return self.keymap[key]
+        if self.keymap is not None:
+            return self.keymap.map[key]
         else:
             raise Exception("please use setkeymap to set keymap")
 
@@ -629,20 +617,20 @@ class Table:
         if s == "*":
             ls = self.gethead()
         else:
-            if isinstance(s,str):
+            if isinstance(s, str):
                 ls = slist(s)
         self.checklist(ls)
         result = [ls]
         if mod == any:
             s = set()
-            for i in range(1,len(self)+1):
-                sub = tuple(self.getlist(i,ls))
+            for i in range(1, len(self) + 1):
+                sub = tuple(self.getlist(i, ls))
                 s.add(sub)
             for r in s:
                 result.append(list(r))
         elif mod == all:
-            for i in range(1,len(self)+1):
-                result.append(self.getlist(i,ls))
+            for i in range(1, len(self) + 1):
+                result.append(self.getlist(i, ls))
         result = Table(result)
         print("SELECT {} from <{}>".format(",".join(result.gethead()), self.name))
         return result
