@@ -1,56 +1,144 @@
-from .row import Row
+from .utility import*
 
-
-class Rows(list):
+class Rows:
+    # behave all like a list and return list except get,set, del
 
     def __init__(self, table, indices):
         self.table = table
         self.indices = indices
-        list.__init__(self, [Row(table,index) for index in indices])
+        #self.array = table.array2d[index]
+        self.array2d =[]
+        for i in indices:
+            self.array2d.append(table.array2d[i])
 
-    def __getitem__(self, colkey):
-        if isinstance(colkey, int):
-            l = []
-            for row in self:
-                l.append(row[colkey])
-            return l
-        elif isinstance(colkey, str):
-            index = self.table.getcolindex(colkey)
-            return super().__getitem__(index)
-        elif isinstance(colkey, slice):
-            start = colkey.start if colkey.start is not None else 0
-            stop = colkey.stop+1 if colkey.stop is not None else len(self)+1
-            return super().__getitem__(slice(start,stop))
-        elif isinstance(colkey, tuple) or isinstance(colkey, list):
+
+    def __getitem__(self, key):
+        if isinstance(key, int) or isinstance(key,str):
+            j = None
+            if isinstance(key,int):
+                j = self.table.recapcolindex(key)
+            elif isinstance(key,str):
+                self.table.check(key)
+                j = self.table.colmap[key]
+            return [self.table.array2d[i][j] for i in self.indices]
+        elif isinstance(key, slice) or isinstance(key, tuple) or isinstance(key, list):
+            ls = None
+            if isinstance(key, slice):
+                #down or up index may modify
+                sindex = 0 if key.start is None else key.start
+                eindex = wid(self.table)-1 if key.stop is None else key.stop
+                sindex = self.table.recapcolindex(sindex)
+                eindex = self.table.recapcolindex(eindex)
+                ls = list(range(sindex, eindex+1))
+            elif isinstance(key, tuple) or isinstance(key, list):
+                ls = []
+                for v in key:
+                    if isinstance(v, str):
+                        ls.append(self.table.colmap[v])
+                    elif isinstance(v, int):
+                        ls.append(self.table.recapcolindex(v))
             result = []
-            for i in range(len(colkey)):
-                index = self.table.getcolindex(colkey[i])
-                result.append(super().__getitem__(index))
+            for i in self.indices:
+                sub = [self.table.array2d[i][j] for j in ls]
+                result.append(sub)
             return result
 
-    def _set(self, colkey, value):
-        if isinstance(colkey, int):
-            index = colkey
-            super().__setitem__(index, value)
-            self.table.setentry(self.index, index, value)
-        elif isinstance(colkey, str):
-            index = self.table.getcolindex(colkey)
-            super().__setitem__(index, value)
-            self.table.setentry(self.index, index, value)
-        elif isinstance(colkey, slice):
-            start = 0 if colkey.start is None else colkey
-            stop = len(self) if colkey.stop is None else colkey.stop
-            for i in range(start, stop+1):
-                super().__setitem__(i,value[i])
-                self.table.setentry(self.index, i, value[i])
-        elif isinstance(colkey, tuple) or isinstance(colkey, list):
-            for i in range(len(colkey)):
-                index = self.table.getcolindex(colkey[i])
-                super().__setitem__(index, value[i])
-                self.table.setentry(self.index, i, value[i])
+            pass
 
     def __setitem__(self, key, value):
-        self._set(key, value)
+        if isinstance(key, int) or isinstance(key,str):
+            j = None
+            if isinstance(key,int):
+                j = self.table.recapcolindex(key)
+            elif isinstance(key,str):
+                self.table.check(key)
+                j = self.table.colmap[key]
+            # set item
+            if isinstance(value,list) or isinstance(value, tuple):
+                #array set
+                if len(value) == len(self.indices):
+                    for k in range(len(value)):
+                        self.table.setentry(self.indices[k],j,value[k])
+                else:
+                    raise Exception("length not map")
+            else:
+                #value set
+                for i in self.indices:
+                    self.table.setentry(i,j,value)
+
+
+        elif isinstance(key, slice) or isinstance(key, tuple) or isinstance(key, list):
+            ls = None
+            if isinstance(key, slice):
+                #down or up index may modify
+                sindex = 0 if key.start is None else key.start
+                eindex = wid(self.table)-1 if key.stop is None else key.stop
+                sindex = self.table.recapcolindex(sindex)
+                eindex = self.table.recapcolindex(eindex)
+                ls = list(range(sindex, eindex+1))
+            elif isinstance(key, tuple) or isinstance(key, list):
+                ls = []
+                for v in key:
+                    if isinstance(v, str):
+                        ls.append(self.table.colmap[v])
+                    elif isinstance(v, int):
+                        ls.append(self.table.recapcolindex(v))
+            #set item
+            if isinstance(value, list) or isinstance(value, tuple):
+                #check length
+                if isinstance(value[0],list) or isinstance(value[0], tuple):
+                    if len(value) == len(self.indices):
+                        #set 2d-array
+                        #check width
+                        for r in value:
+                            if not (isinstance(r,list) or isinstance(r,tuple)):
+                                raise Exception("only sub list or sub tuple is supported")
+                            if len(r) != len(ls):
+                                raise Exception("width not map")
+                        for i in range(len(value)):
+                            for j in range(len(value[0])):
+                                self.table.setentry(self.indices[i],ls[j],value[i][j])
+                    else:
+                        raise Exception("length not map or wid")
+
+                else:
+                    if len(value) == len(ls):
+                        #set array
+                        for i in range(len(self.indices)):
+                            for j in range(len(ls)):
+                                self.table.setentry(self.indices[i],ls[j],value[j])
+                    else:
+                        raise Exception("width not map")
+            else:
+                for i in self.indices:
+                    for j in ls:
+                        self.table.setentry(i,j,value)
 
     def __delitem__(self, key):
-        self._set(key, None)
+        self.__setitem__(key,None)
+
+    def __iter__(self):
+        return iter(self.array2d)
+
+    def __next__(self):
+        return next(self.array2d)
+
+    def copy(self):
+        result =[]
+        for r in self.array2d:
+            result.append(r.copy())
+        return result
+
+    def __str__(self):
+        return str(self.array2d)
+
+    def __repr__(self):
+        return repr(self.array2d)
+
+    def __len__(self):
+        return len(self.array2d)
+
+
+
+
+

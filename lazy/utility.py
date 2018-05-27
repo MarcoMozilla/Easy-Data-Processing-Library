@@ -4,6 +4,11 @@ def inilist(n, s=None):
         s = "\'" + s + "\'"
     return eval("[" + ",".join([str(s)] * n) + "]")
 
+def inilist2d(i,j, s=None):
+    if isinstance(s, str):
+        s = "\'" + s + "\'"
+    result=[eval("[" + ",".join([str(s)] * j) + "]") for k in range(i)]
+    return result
 
 def pdict(d, n=None, sep=""):
     ident = "   "
@@ -91,5 +96,14 @@ def decomp(s):
     else:
         return decomp2(s)
 
+def rotlist12(ls):
+    return [[v] for v in ls]
+
+def rotlist21(ls):
+    result =[]
+    for v in ls:
+        result+=v
+    return result
+
 def wid(t):
-    return len(t.table[0])
+    return len(t.array2d[0])

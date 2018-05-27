@@ -1,51 +1,97 @@
-class Row(list):
+from .utility import*
+
+
+class Row:
     # behave all like a list and return list except get,set, del
 
     def __init__(self, table, index):
         self.table = table
         self.index = index
-        list.__init__(self, table.table[index])
+        self.array= table.array2d[index]
 
-    def __getitem__(self, colkey):
-        if isinstance(colkey, int):
-            return super().__getitem__(colkey)
-        elif isinstance(colkey, str):
-            index = self.table.getcolindex(colkey)
-            return super().__getitem__(index)
-        elif isinstance(colkey, slice):
-            start = colkey.start if colkey.start is not None else 0
-            stop = colkey.stop+1 if colkey.stop is not None else len(self)+1
-            return super().__getitem__(slice(start,stop))
-        elif isinstance(colkey, tuple) or isinstance(colkey, list):
-            result = []
-            for i in range(len(colkey)):
-                index = self.table.getcolindex(colkey[i])
-                result.append(super().__getitem__(index))
-            return result
+    def __getitem__(self, key):
+        if isinstance(key,int) or isinstance(key,str):
+            j = None
+            if isinstance(key,int):
+                j = self.table.recapcolindex(key)
+            elif isinstance(key,str):
+                j = self.table.colmap[key]
+            return self.array[j]
+        elif isinstance(key, slice) or isinstance(key, tuple) or isinstance(key, list):
+            ls = None
+            if isinstance(key, slice):
+                #down or up index may modify
+                sindex = 0 if key.start is None else key.start
+                eindex = wid(self.table)-1 if key.stop is None else key.stop
+                sindex = self.table.recapcolindex(sindex)
+                eindex = self.table.recapcolindex(eindex)
+                ls = list(range(sindex, eindex+1))
+            elif isinstance(key, tuple) or isinstance(key, list):
+                ls = []
+                for v in key:
+                    if isinstance(v, str):
+                        ls.append(self.table.colmap[v])
+                    elif isinstance(v, int):
+                        ls.append(self.table.recapcolindex(v))
+            #print(ls)
+            return [self.array[j] for j in ls]
 
-    def _set(self, colkey, value):
-        if isinstance(colkey, int):
-            index = colkey
-            super().__setitem__(index, value)
-            self.table.setentry(self.index, index, value)
-        elif isinstance(colkey, str):
-            index = self.table.getcolindex(colkey)
-            super().__setitem__(index, value)
-            self.table.setentry(self.index, index, value)
-        elif isinstance(colkey, slice):
-            start = 0 if colkey.start is None else colkey
-            stop = len(self) if colkey.stop is None else colkey.stop
-            for i in range(start, stop+1):
-                super().__setitem__(i,value[i])
-                self.table.setentry(self.index, i, value[i])
-        elif isinstance(colkey, tuple) or isinstance(colkey, list):
-            for i in range(len(colkey)):
-                index = self.table.getcolindex(colkey[i])
-                super().__setitem__(index, value[i])
-                self.table.setentry(self.index, i, value[i])
 
     def __setitem__(self, key, value):
-        self._set(key, value)
-
+        if isinstance(key,int) or isinstance(key,str):
+            j = None
+            if isinstance(key,int):
+                j = self.table.recapcolindex(key)
+            elif isinstance(key,str):
+                j = self.table.colmap[key]
+            self.table.setentry(self.index,j,value)
+        elif isinstance(key, slice) or isinstance(key, tuple) or isinstance(key, list):
+            ls = None
+            if isinstance(key, slice):
+                sindex = 0 if key.start is None else key.start
+                eindex = wid(self.table)-1 if key.stop is None else key.stop
+                sindex = self.table.recapcolindex(sindex)
+                eindex = self.table.recapcolindex(eindex)
+                ls = list(range(sindex, eindex+1))
+            elif isinstance(key, tuple) or isinstance(key, list):
+                ls = []
+                for v in key:
+                    if isinstance(v, str):
+                        ls.append(self.table.colmap[v])
+                    elif isinstance(v, int):
+                        ls.append(self.table.recapcolindex(v))
+            #print(ls)
+            #array object
+            if isinstance(value, list) or isinstance(value, tuple):
+                if len(value) == len(ls):
+                    for k in range(len(value)):
+                        self.table.setentry(self.index, ls[k],value[k])
+                else:
+                    raise Exception("width not map")
+            else:
+                for j in ls:
+                    self.table.setentry(self.index, j, value)
+            
+            #set value
+                        
     def __delitem__(self, key):
-        self._set(key, None)
+        self.__setitem__(key, None)
+
+
+    def __iter__(self):
+        return iter(self.array)
+
+    def __next__(self):
+        return next(self.array)
+
+    def copy(self):
+        return self.array.copy()
+
+    def __str__(self):
+        return str(self.array)
+
+    def __repr__(self):
+        return repr(self.array)
+
+    def __len__(self):
+        return len(self.array)
