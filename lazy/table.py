@@ -44,11 +44,11 @@ class Table:
         self.name = name
         self.array2d = []
         self.lenmap = []
+        self.sepmap = []  #track seperate seperate symbol
         self.colmap = {}
         self.keymap = None
         self.groupmap = None
         self.bindmap = None  # new class
-
 
         if not array2d:
             pass
@@ -61,10 +61,20 @@ class Table:
                 self.array2d = array2d
             else:
                 raise Exception("array2d should be 2D-list")
+            self.setsepmap()
             self.setlenmap()
             self.setcolmap()
+
         else:
             raise Exception("array2d should be 2D-list")
+
+    def setsepmap(self,j=None,sep ='\n'):
+        if j is None:
+            n = wid(self)
+            self.sepmap = inilist(n,'\n')
+        else:
+            self.sepmap[j] = sep
+            self.setlenmapj(j)
 
     def init(head,i,name= None):
         #error!!!!
@@ -161,7 +171,9 @@ class Table:
         if self.groupmap is not None:
             self.groupmap.trackdelrow(i)
         # track bindmap
-        self.recaplenmap(self.array2d.pop(i))
+        row =self.array2d.pop(i)
+        self.recaplenmap(row)
+
 
     def setentry(self, i, j, value):
         i = len(self) + 1 + i if i < 0 else i
@@ -209,6 +221,7 @@ class Table:
             self.setkey(keymap.key)
 
 
+
     def setkey(self, s):
         self.delkey()
         self.keymap = Keymap.make(self, s)
@@ -234,25 +247,28 @@ class Table:
     def setlenmap(self):
         lenmap = []
         for i in range(wid(self)):
-            lenmap.append(max([len(str(v[i])) for v in self.array2d]))
+            lenmap.append(max([maxlen(v[i],self.sepmap[i]) for v in self.array2d]))
         self.lenmap = lenmap
 
-    def recaplenmap(self, i):
-        row = self.array2d[i]
+    def recaplenmap(self, row):
+        #recap lenmap by delete row
         for j in range(wid(self)):
-            if len(str(row[j])) == self.lenmap[j]:
-                self.lenmap[j] = max([len(str(v[j])) for v in self.array2d])
+            if maxlen(row[j],self.sepmap[j]) == self.lenmap[j]:
+                self.lenmap[j] = max([maxlen(v[j],self.sepmap[j]) for v in self.array2d])
 
     def setlenmapj(self,j):
-        self.lenmap[j] = max([len(str(v[j])) for v in self.array2d])
+        #set lenmap by col
+        self.lenmap[j] = max([maxlen(v[j],self.sepmap[j]) for v in self.array2d])
 
     def setlenmapi(self, i):
-        for j in range(len(self.lenmap)):
-            self.lenmap[j] = max(self.lenmap[j], len(str(self.array2d[i][j])))
+        #set lenmap by row
+        row = self.array2d[i]
+        for j in range(wid(self)):
+            self.lenmap[j] = max(self.lenmap[j], maxlen(row[j],self.sepmap[j]))
 
     def setlenmapij(self, i, j):
         #refresh entry i,j
-        self.lenmap[j] = max(self.lenmap[j], len(str(self.array2d[i][j])))
+        self.lenmap[j] = max(self.lenmap[j], maxlen(self.array2d[i][j],self.sepmap[j]))
 
     def setcolmap(self):
         head = self.gethead()
@@ -475,7 +491,34 @@ class Table:
         return result
 
     def row2str(self, v, sep="|"):
-        return sep.join([Table.spacing(str(v[i]), self.lenmap[i]) for i in range(len(v))])
+
+        seplist= inilist(wid(self),None)
+        for j in range(wid(self)):
+
+            seplist[j]= strsep2list(str(v[j]),self.sepmap[j],self.lenmap[j])
+
+        #pprint(seplist)
+        m = max(len(v) for v in seplist)
+
+
+        for j in range(wid(self)):
+            dis = m - len(seplist[j])
+            seplist[j]+= inilist(dis,"")
+
+        #pprint(seplist)
+
+        for j in range(wid(self)):
+            for i in range(m):
+                seplist[j][i] = Table.spacing(seplist[j][i],self.lenmap[j])
+
+        #pprint(seplist)
+        ls = []
+        for i in range(m):
+            ls.append(sep.join([seplist[j][i] for j in range(wid(self))]))
+
+        #pprint(ls)
+        return '\n'.join(ls)
+
 
     def head2str(self,sep="|"):
         head = self.gethead()
