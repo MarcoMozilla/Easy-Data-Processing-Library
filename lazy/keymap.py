@@ -28,15 +28,18 @@ class Keymap(dict):
             s = slist(s)
         result.key += s
         result.table = table
-        result.table.checklist(result.key)
+        result.table.REatris(result.key)
         for i in range(1,len(result.table)+1):
             t= tuple(result.table.getlist(i,result.key))
             if not t in result.map:
                 result.map[t] = i
             else:
+                print("row",result.map[t])
+                print("row",i)
                 raise Exception("{} is not a key".format(result.key))
-        result.lenmap = result.table.lenmap.copy()
-        result.fixlenmap()
+        #if result.table.lenmap is not None:
+            #result.lenmap = result.table.lenmap.copy()
+            #result.fixlenmap()
         return result
 
 

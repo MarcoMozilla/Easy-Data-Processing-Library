@@ -62,7 +62,7 @@ class Row:
                         ls.append(self.table.recapcolindex(v))
             #print(ls)
             #array object
-            if isinstance(value, list) or isinstance(value, tuple):
+            if isinstance(value, list):
                 if len(value) == len(ls):
                     for k in range(len(value)):
                         self.table.setentry(self.index, ls[k],value[k])

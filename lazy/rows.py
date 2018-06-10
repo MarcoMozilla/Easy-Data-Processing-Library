@@ -18,7 +18,7 @@ class Rows:
             if isinstance(key,int):
                 j = self.table.recapcolindex(key)
             elif isinstance(key,str):
-                self.table.check(key)
+                self.table.REatri(key)
                 j = self.table.colmap[key]
             return [self.table.array2d[i][j] for i in self.indices]
         elif isinstance(key, slice) or isinstance(key, tuple) or isinstance(key, list):
@@ -51,10 +51,10 @@ class Rows:
             if isinstance(key,int):
                 j = self.table.recapcolindex(key)
             elif isinstance(key,str):
-                self.table.check(key)
+                self.table.REatri(key)
                 j = self.table.colmap[key]
             # set item
-            if isinstance(value,list) or isinstance(value, tuple):
+            if isinstance(value,list):
                 #array set
                 if len(value) == len(self.indices):
                     for k in range(len(value)):
@@ -84,9 +84,9 @@ class Rows:
                     elif isinstance(v, int):
                         ls.append(self.table.recapcolindex(v))
             #set item
-            if isinstance(value, list) or isinstance(value, tuple):
+            if isinstance(value, list):
                 #check length
-                if isinstance(value[0],list) or isinstance(value[0], tuple):
+                if isinstance(value[0],list):
                     if len(value) == len(self.indices):
                         #set 2d-array
                         #check width

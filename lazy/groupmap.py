@@ -35,7 +35,7 @@ class Groupmap(dict):
             s = slist(s)
         result.group+=s
         result.table = table
-        result.table.checklist(result.group)
+        result.table.REatris(result.group)
         for i in range(1, len(result.table) + 1):
             t = tuple(result.table.getlist(i, result.group))
             if t in result.map:
@@ -59,10 +59,16 @@ class Groupmap(dict):
     def trackdelrow(self, i):
         # 从self.groupmap中的对应set中删除第 i-th row
         # 在self.keymap中 第ith row一直到末尾所有的key全部减一
+
         t = tuple(self.table.getlist(i, self.group))
         self.map[t].remove(i)
+        if len(self.map[t]) == 0:
+            del self.map[t]
         for index in range(i + 1, len(self.table) + 1):
-            t = tuple(self.table.getlist(i, self.group))
+            #print("index = ",i)
+            t = tuple(self.table.getlist(index, self.group))
+            #print("t = ", t)
+            #pprint(self.map)
             self.map[t].remove(index)
             self.map[t].add(index - 1)
 
@@ -90,6 +96,8 @@ class Groupmap(dict):
             oldt = tuple(self.table.getlist(i, self.group))
             if oldt in self.map:
                 self.map[oldt].remove(i)
+                if len(self.map[oldt]) == 0:
+                    del self.map[oldt]
             if newt in self.map:
                 self.map[newt].add(i)
             else:
