@@ -52,16 +52,24 @@ class Table:
             self.setcolmap()
 
             if len(self.array2d) < Table.limit and printable:
-                self.setsepmap()
-                self.setlenmap()
+                self.enableprint()
         else:
             raise Exception("array2d should be 2D-list")
 
+
+    def enableprint(self):
+        self.setsepmap()
+        self.setlenmap()
+
     def make(head, i, name = None, printable = True):
         # error!!!!
-        if isinstance(head, str) or isinstance(head, list):
+        if isinstance(head, str) or isinstance(head, list) or isinstance(head,tuple):
             if isinstance(head, str):
                 head = slist(head)
+            elif isinstance(head,tuple):
+                head = list(head)
+            else:
+                pass
             array2d = inilist2d(i, len(head))
             result = Table([head] + array2d, printable)
             if name:
@@ -92,10 +100,12 @@ class Table:
                 result.append(vlist)
         file.close()
         t2 = time()
+        #pprint(result)
         result = Table(result, name, printable)
         t3 = time()
         print("READ <{}> FROM {} takes {} + {}".format(name, fname,t2-t1,t3-t2))
         return result
+
     def save(self, name=None):
         t1 = time()
         # ask for ensure!!!
@@ -130,7 +140,7 @@ class Table:
 
     #============================general help function=================
     def gethead(self):
-        return self.array2d[0].copy()
+        return self.array2d[0]
 
     # include classify, group, etc all vary by different mod
     def getsearchmap(self, ls):
@@ -147,18 +157,15 @@ class Table:
         return result
 
     def setkey(self, s):
-        self.delkey()
         self.keymap = Keymap.make(self, s)
+
     def delkey(self):
-        if self.keymap is not None:
-            del self.keymap
         self.keymap = None
+
     def setgroup(self, s):
-        self.delgroup()
         self.groupmap = Groupmap.make(self, s)
+
     def delgroup(self):
-        if self.groupmap is not None:
-            del self.groupmap
         self.groupmap = None
 
     # ===========================debug, print & str===================================
@@ -209,7 +216,7 @@ class Table:
             ls.append(sep.join([seplist[j][i] for j in range(wid(self))]))
         return '\n'.join(ls)
     def head2str(self, sep="|"):
-        head = self.gethead()
+        head = self.gethead().copy()
         ls = []
         for i in range(len(head)):
             s = str(head[i])
@@ -683,6 +690,7 @@ class Table:
                 self.delrow(index)
         pass
     def str2index(self, key):
+        #check all value of
         key = slist(key)
         t = tuple([valueof(v) for v in key])
         if self.keymap is not None and t in self.keymap.map:
@@ -690,6 +698,9 @@ class Table:
             return index
         else:
             raise Exception("please set key")
+
+    def iof(self,*args):
+        return self.keymap.map[args]
 
     def getlist(self, i, ls):
         """
@@ -777,7 +788,7 @@ class Table:
         if on is None:
             result = [lmrm[0] + lmrm[1] + lmrm[2]]
         else:
-            result = [self.gethead() + other.gethead()]
+            result = [self.gethead().copy() + other.gethead().copy()]
         for t in sharedentry:
             mid = list(t)
             for i in selfsmap[t]:
@@ -838,7 +849,7 @@ class Table:
     def __matmul__(self, other):
         return self._join(other)
     def __mul__(self, other):
-        result = [self.gethead() + other.gethead()]
+        result = [self.gethead().copy() + other.gethead().copy()]
         for i in range(1, len(self) + 1):
             for j in range(1, len(other) + 1):
                 sub = self[i] + other[j]
@@ -850,7 +861,7 @@ class Table:
         if power < 0:
             return None
         if power == 0:
-            return Table(self.gethead())
+            return Table(self.gethead().copy())
         r = self.copy()
         for i in range(power - 1):
             r = r * self
@@ -862,7 +873,7 @@ class Table:
         selfset = self.getset()
         otherset = other.getset()
         sss = selfset | otherset
-        result = [self.gethead()]
+        result = [self.gethead().copy()]
         for v in sss:
             result.append(list(v))
         return Table(result)
@@ -870,7 +881,7 @@ class Table:
         selfset = self.getset()
         otherset = other.getset()
         sss = selfset & otherset
-        result = [self.gethead()]
+        result = [self.gethead().copy()]
         for v in sss:
             result.append(list(v))
         return Table(result)
@@ -878,7 +889,7 @@ class Table:
         selfset = self.getset()
         otherset = other.getset()
         sss = selfset ^ otherset
-        result = [self.gethead()]
+        result = [self.gethead().copy()]
         for v in sss:
             result.append(list(v))
         return Table(result)
@@ -886,7 +897,7 @@ class Table:
         selfset = self.getset()
         otherset = other.getset()
         sss = selfset - otherset
-        result = [self.gethead()]
+        result = [self.gethead().copy()]
         for v in sss:
             result.append(list(v))
         return Table(result)
@@ -896,70 +907,110 @@ class Table:
         pass
 
     # select perform function as copy()
-    def select(self, **kwargs):
-        where = None
-        if "where" in kwargs:
-            where = kwargs["where"]
-            del kwargs["where"]
-
+    def select(self,mod=all, where = None,**kwargs):
         if self.groupmap is not None:
-            head = kwargs.keys()
+            head = list(kwargs.keys())
+            #print(head)
             length = len(self.groupmap.map)
-            result = Table.make(head,length)
-            if where is None:
-                #start check
-                for key in kwargs:
-                    if not callable(kwargs[key]) and kwargs[key] not in self.groupmap.group:
-                        raise Exception("select col must be in the group")
-                for key in kwargs:
-                    if callable(kwargs):
+            result = Table.make(head,length,printable=False)
+            # start check
+            for key in kwargs:
+                if kwargs[key] == '':
+                    kwargs[key]=key
+                if not callable(kwargs[key]) and kwargs[key] not in self.groupmap.group:
+                    raise Exception("select col must be in the group")
 
-                    else:
-                        result[:][key]=[tp[self.groupmap.group.index(kwargs[key])] for tp self.groupmap.keys()]
-
-
+            for key in kwargs:
+                if callable(kwargs[key]):
+                    mp=self.groupmap.map
+                    result[:][key]=[kwargs[key](Rows(self,list(mp[gk]))) for gk in mp]
+                else:
+                    index = self.groupmap.group.index(kwargs[key])
+                    mp = self.groupmap.map
+                    result[:][key]=[tp[index] for tp in mp]
+            #get rid of where = false
+            if callable(where):
+                i = 1
+                while i <= len(result):
+                    if not where(Row(result,i)):
+                        result.delrow(i)
+                        i-=1
+                    i+=1
+            elif where is None:
+                pass
             else:
-
-
-
-
-
-
-        else:
-            # using string to input all fix!!!
-            mods = all if mods is None else mods
-            ls = None
-            if s == "*":
-                ls = self.gethead()
-            else:
-                if isinstance(s, str):
-                    ls = slist(s)
-            self.REatris(ls)
-            result = [ls]
-            if mods == any:
-                s = set()
-                for i in range(1, len(self) + 1):
-                    sub = tuple(self.getlist(i, ls))
-                    s.add(sub)
-                for r in s:
-                    result.append(list(r))
-            elif mods == all:
-                for i in range(1, len(self) + 1):
-                    result.append(self.getlist(i, ls))
-            result = Table(result)
-            print("SELECT {} from <{}>".format(",".join(result.gethead()), self.name))
+                raise Exception("where should be a function or None")
+            #result
+            self.degroup()
+            result.enableprint()
+            #print some thing to notify
             return result
+        else:
+            #group is None
+            result = None
+            box = None
+            adding = None
+            getout = None
+            if mod == all:
+                box = []
+                def adding(s,ls):
+                    s.append(ls.copy())
+                getout = lambda x : x
+            elif mod == any:
+                box = set()
+                def adding(s,ls):
+                    s.add(tuple(ls))
+                getout = lambda x:[list(v) for v in x]
+            else:
+                raise Exception("mod must be all or any")
+
+            if kwargs == {}:
+                if where is None:
+                    for r in self:
+                        adding(box,r.copy())
+                elif callable(where):
+                    for i in range(1,len(self)+1):
+                        if where(Row(self,i)):
+                            adding(box,self.array2d[i].copy())
+                else:
+                    raise Exception("where must be None or function")
+                result=Table([self.gethead().copy()]+getout(box))
+                return result
+            else:
+                #process kwargs
+                for key in kwargs:
+                    if kwargs[key] == '':
+                        kwargs[key] = key
+                    if not callable(kwargs[key]):
+                        self.REatri(kwargs[key])
+                #start using
+                if where is None:
+                    for i in range(1,len(self)+1):
+                        r =Row(self,i)
+                        ls = [r[kwargs[key]] if isinstance(kwargs[key],str) else kwargs[key](r) for key in kwargs]
+                        adding(box,ls)
+                elif callable(where):
+                    for i in range(1,len(self)+1):
+                        r= Row(self,i)
+                        if where(r):
+                            ls = [r[kwargs[key]] if isinstance(kwargs[key],str) else kwargs[key](r) for key in kwargs]
+                            adding(box,ls)
+                else:
+                    raise Exception("where must be None or function")
+                #pprint(box)
+                result=Table([list(kwargs.keys())]+getout(box))
+                return result
+            #print("SELECT {} from <{}>".format(",".join(result.gethead()), self.name))
 
     def orderby(self, key=None, reverse=False, func=None):
     # after orderby will return self
         # change when next edition to seperate attribute name and normal entry
         # this should be done at origin vaiable not output another new
         # change case when group is done
-        head =  self.array2d.pop(0)
         if key is None:
-            self.array2d.sort(reverse)
+            self.array2d[1:]= sorted(self.array2d[1:],reverse)
         elif callable(key):
-            self.array2d.sort(key=key,reverse=reverse)
+            self.array2d[1:]= sorted(self.array2d[1:],key=key,reverse=reverse)
         elif isinstance(key,str):
             s = slist(key)
             self.REatris(s)
@@ -972,8 +1023,7 @@ class Table:
                 def sfunction(r):
                     return [func(r[i]) for i in indice]
 
-            self.array2d.sort(key=sfunction,reverse=reverse)
-        self.array2d.insert(0,head)
+            self.array2d[1:] = sorted(self.array2d[1:],key=sfunction,reverse=reverse)
         #refresh all
         if self.keymap is not None:
             self.setkey(self.keymap.key)
@@ -1005,10 +1055,8 @@ class Table:
         self.groupmap=None
 
     def groupof(self,*args):
-        t = args
-        print(t)
-        if self.groupmap is not None and t in self.groupmap.map:
-            indices = list(self.groupmap.map[t])
+        if self.groupmap is not None and args in self.groupmap.map:
+            indices = list(self.groupmap.map[args])
             return indices
         else:
             raise  Exception("not have such group")
@@ -1080,17 +1128,17 @@ except:
         pass
 
     #==============================apply & extend function part =======================
-    def apply(self, key, fparamod= None, f=None, *args):
+    def apply(self, key, fparamod = None, f = None, *args,**kwargs):
         j = self.modicolinput(key)
         if fparamod == "e":
             for i in range(1, len(self) + 1):
-                self[i][j] = f(self[i][j], *args)
+                self[i][j] = f(self[i][j], *args,**kwargs)
         elif fparamod == "r":
             for i in range(1, len(self) + 1):
-                self[i][j] = f(self[i], *args)
+                self[i][j] = f(self[i], *args,**kwargs)
         elif fparamod == None:
             for i in range(1, len(self) + 1):
-                self[i][j] = f(*args)
+                self[i][j] = f(*args,**kwargs)
 
     def shuffle(self):
         if self.bindmap is not None:
