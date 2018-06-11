@@ -1,3 +1,6 @@
+import string
+from pprint import *
+
 def inilist(n, s=None):
     return [s for i in range(n)]
 
@@ -13,9 +16,11 @@ def slist(s, sep=","):
 
 
 def isnum(s):
+
     try:
         s = int(s)
         if isinstance(s, int):
+            print(s)
             return True
     except:
         pass
@@ -29,12 +34,19 @@ def isnum(s):
 
 
 def valueof(s):
-    if isnum(s) or s == "True" or s == "False" or s == "None":
+    if s == "True" or s == "False" or s == "None":
         return eval(s)
-    elif s == "":
+    if s == "":
         return None
-    else:
+    try:
+        s = int(s)
         return s
+    except:
+        try:
+            s = float(s)
+            return s
+        except:
+            return s
 
 
 def decomp1(s):
@@ -79,51 +91,79 @@ def wid(t):
 
 def strsep2list(s, sep='\n', limit=None):
     result = []
-    c = 0
     i = 0
     n = len(s)
+    sub = ""
+    mlen = 0
     while i < n:
+        if s[i] not in string.printable:
+            mlen += 2
+        else:
+            mlen += 1
+        sub +=s[i]
         if s[i] == '\n':
-            sub = s[c:i]
-            result.append(sub)
-            #print("case2:",result)
-            c = i + 1
+            result.append(sub[:-1])
+            sub = ""
+            mlen = 0
         elif s[i] == sep:
-            sub = s[c:i + 1]
             result.append(sub)
-            #print("case1:", result)
-            c = i + 1
-
-        elif limit != None and i - c + 1 == limit:
-            sub = s[c:i + 1]
+            sub = ""
+            mlen = 0
+        elif mlen > limit:
+            result.append(sub[:-1])
+            sub = ""
+            mlen = 0
+            i-=1
+        elif mlen == limit:
             result.append(sub)
-            #print("case3:",result)
-            c = i + 1
+            sub = ""
+            mlen = 0
         elif i == len(s) - 1:
-            sub = s[c:i + 1]
             result.append(sub)
-            #print("case4",result)
+            sub = ""
+            mlen = 0
+        else:
+            pass
+
         i += 1
+    #print("result = ")
+    #pprint(result)
     return result
 
 
+
+def clen(s):
+    result = 0
+    for i in range(len(s)):
+        if s[i] not in string.printable:
+            result += 2
+        else:
+            result += 1
+    return result
+
 def strsep2maxlen(s, sep='\n'):
     result = 0
-    c = 0
     i = 0
     n = len(s)
+    length = 0
     while i < n:
+        if s[i] not in string.printable:
+            adding = 2
+        else:
+            adding = 1
+        length += adding
         if s[i] == '\n':
-            sub = i - c
+            sub = length - 1
             result = max(result, sub)
-            c = i + 1
+            length = 0
         elif s[i] == sep:
-            sub = i-c+1
+            sub = length
             result = max(result, sub)
-            c = i + 1
+            length = 0
         elif i == len(s) - 1:
-            sub = i - c + 1
+            sub = length
             result = max(result,sub)
+            length = 0
         i += 1
     return result
 
@@ -133,3 +173,41 @@ def maxlen(v, sep='\n'):
         return strsep2maxlen(v, sep)
     else:
         return len(str(v))
+
+
+def boolof(s):
+    booldict = {"True": True, "False": False}
+    if s == "" or s == "None":
+        return None
+    else:
+        try:
+            return booldict[s]
+        except:
+            raise Exception("\'{}\' cannot cast to int".format(s))
+
+
+def intof(s):
+    if s == "" or s == "None":
+        return None
+    else:
+        try:
+            return int(s)
+        except:
+            raise Exception("\'{}\' cannot cast to int".format(s))
+
+
+def floatof(s):
+    if s == "" or s == "None":
+        return None
+    else:
+        try:
+            return float(s)
+        except:
+            raise Exception("\'{}\' cannot cast to int".format(s))
+
+
+def strof(s):
+    if s == "" or s == "None":
+        return None
+    else:
+        return s
