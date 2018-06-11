@@ -1,8 +1,8 @@
-name,grade,IQ,color
-moka,88.58965,200,grey
-sasa,38.23073,150,pink
-kadi,53.0516,80,red
-maki,61.99805,75,yello
-xido,33.63897,60,grey
-wade,47.36268,30,blue
-cida,67.20169,100,purple
+name,grade,IQ,color,word
+moka,88.58965,200,grey,hhh
+sasa,38.23073,100,pink,ooo
+kadi,53.0516,80,red,emm
+maki,61.99805,80,red,eh
+xido,33.63897,30,grey,oop
+wade,47.36268,30,blue,uuu
+cida,67.20169,100,pink,ppp
