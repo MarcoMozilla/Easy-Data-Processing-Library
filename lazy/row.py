@@ -13,7 +13,7 @@ class Row:
         if isinstance(key,int) or isinstance(key,str):
             j = None
             if isinstance(key,int):
-                j = self.table.recapcolindex(key)
+                j = self.table._recapcolindex(key)
             elif isinstance(key,str):
                 j = self.table.colmap[key]
             return self.array[j]
@@ -23,8 +23,8 @@ class Row:
                 #down or up index may modify
                 sindex = 0 if key.start is None else key.start
                 eindex = wid(self.table)-1 if key.stop is None else key.stop
-                sindex = self.table.recapcolindex(sindex)
-                eindex = self.table.recapcolindex(eindex)
+                sindex = self.table._recapcolindex(sindex)
+                eindex = self.table._recapcolindex(eindex)
                 ls = list(range(sindex, eindex+1))
             elif isinstance(key, tuple) or isinstance(key, list):
                 ls = []
@@ -32,7 +32,7 @@ class Row:
                     if isinstance(v, str):
                         ls.append(self.table.colmap[v])
                     elif isinstance(v, int):
-                        ls.append(self.table.recapcolindex(v))
+                        ls.append(self.table._recapcolindex(v))
             #print(ls)
             return [self.array[j] for j in ls]
 
@@ -41,7 +41,7 @@ class Row:
         if isinstance(key,int) or isinstance(key,str):
             j = None
             if isinstance(key,int):
-                j = self.table.recapcolindex(key)
+                j = self.table._recapcolindex(key)
             elif isinstance(key,str):
                 j = self.table.colmap[key]
             self.table.setentry(self.index,j,value)
@@ -50,8 +50,8 @@ class Row:
             if isinstance(key, slice):
                 sindex = 0 if key.start is None else key.start
                 eindex = wid(self.table)-1 if key.stop is None else key.stop
-                sindex = self.table.recapcolindex(sindex)
-                eindex = self.table.recapcolindex(eindex)
+                sindex = self.table._recapcolindex(sindex)
+                eindex = self.table._recapcolindex(eindex)
                 ls = list(range(sindex, eindex+1))
             elif isinstance(key, tuple) or isinstance(key, list):
                 ls = []
@@ -59,7 +59,7 @@ class Row:
                     if isinstance(v, str):
                         ls.append(self.table.colmap[v])
                     elif isinstance(v, int):
-                        ls.append(self.table.recapcolindex(v))
+                        ls.append(self.table._recapcolindex(v))
             #print(ls)
             #array object
             if isinstance(value, list):

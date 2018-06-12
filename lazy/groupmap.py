@@ -1,11 +1,11 @@
 from pprint import *
 from .utility import *
-
+from .row import *
 
 class Groupmap(dict):
 
     symbol = "&"
-
+    #using having = ...
     def __init__(self):
         self.table = None
         self.group = []
@@ -29,7 +29,7 @@ class Groupmap(dict):
         if self.table.keymap is not None:
             self.table.keymap.fixlenmap()
 
-    def make(table, s):
+    def make(table, s,having=None):
         result = Groupmap()
         if isinstance(s,str):
             s = slist(s)
@@ -37,11 +37,13 @@ class Groupmap(dict):
         result.table = table
         result.table.REatris(result.group)
         for i in range(1, len(result.table) + 1):
-            t = tuple(result.table.getlist(i, result.group))
-            if t in result.map:
-                result.map[t].add(i)
-            else:
-                result.map[t] = {i}
+            r = Row(result.table,i)
+            if where(r):
+                t = tuple(result.table.getlist(i, result.group))
+                if t in result.map:
+                    result.map[t].add(i)
+                else:
+                    result.map[t] = {i}
         result.lenmap = table.lenmap.copy()
         result.fixlenmap()
         return result
