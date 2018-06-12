@@ -35,15 +35,25 @@ class Groupmap(dict):
             s = slist(s)
         result.group+=s
         result.table = table
-        result.table.REatris(result.group)
-        for i in range(1, len(result.table) + 1):
-            r = Row(result.table,i)
-            if where(r):
+        result.table._REatris(result.group)
+        if callable(having):
+            for i in range(1, len(result.table) + 1):
+                r = Row(result.table,i)
+                if having(r):
+                    t = tuple(result.table.getlist(i, result.group))
+                    if t in result.map:
+                        result.map[t].add(i)
+                    else:
+                        result.map[t] = {i}
+        elif having is None:
+            for i in range(1, len(result.table) + 1):
                 t = tuple(result.table.getlist(i, result.group))
                 if t in result.map:
                     result.map[t].add(i)
                 else:
                     result.map[t] = {i}
+        else:
+            raise Exception("having must be a funtion or None")
         result.lenmap = table.lenmap.copy()
         result.fixlenmap()
         return result

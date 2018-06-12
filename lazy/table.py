@@ -171,28 +171,47 @@ class Table:
                 result[t] = [i]
         return result
 
-    def setkey(self, s):
-        self.keymap = Keymap.make(self, s)
 
-    def delkey(self):
-        self.keymap = None
-
-    def _setgroup(self, s, having = None):
-        self.groupmap = Groupmap.make(self, s,having)
-
-    def _delgroup(self):
-        self.groupmap = None
 
     # ===========================debug, print & str===================================
     # function in this block will not work or minimal information when len(self)> Table.threshold
     #used for debug
-    def see(self):
-        if len(self) <= self.limit:
+    def fsee(self):
+        if len(self)<=self.limit:
             pprint(self.__dict__)
         else:
-            #
-            pass
+            raise Exception("len(self) > limit full print is not support")
 
+    def asee(self):
+        if len(self) <= self.limit:
+            pprint(self.array2d)
+        else:
+            raise Exception("len(self) > limit full print is not support")
+
+    def ksee(self):
+        if len(self) <= self.limit:
+            pprint(self.keymap)
+        else:
+            raise Exception("len(self) > limit full print is not support")
+
+    def gsee(self):
+        if len(self) <= self.limit:
+            pprint(self.groupmap)
+        else:
+            raise Exception("len(self) > limit full print is not support")
+
+    def see(self):
+        d=self.__dict__.copy()
+        d["array2d"]="......"
+        if d["keymap"] is not None:
+            kd = d["keymap"].copy()
+            kd["map"] = "......"
+            d["keymap"]=kd
+        if d["groupmap"] is not None:
+            gd = d["groupmap"].copy()
+            gd["map"] = "......"
+            d["groupmap"] = gd
+        pprint(d)
 
     def _destripC(s, n):
         dis = n - clen(s)
@@ -1070,15 +1089,19 @@ class Table:
     # could apply function to the row or entry
     #group by will return a new table with in group
 
+    def setkey(self, s):
+        self.keymap = Keymap.make(self, s)
+
+    def delkey(self):
+        self.keymap = None
+
     def groupby(self, s,having = None):
         # group array2d by attributes in s
         # form a subtable in groupby dictionary
-        if isinstance(s,str):
-            s = slist(s)
-        self._setgroup(s, having)
+        self.groupmap = Groupmap.make(self, s, having)
         return self
 
-    def degroup(self):
+    def ungroup(self):
         self.groupmap=None
 
     def groupof(self,*args):
@@ -1153,6 +1176,9 @@ except:
         pass
     def scatter(self):
         pass
+
+
+
 
     #==============================apply & extend function part =======================
     def apply(self, key, fparamod=None, f=None, *args,**kwargs):
