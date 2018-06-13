@@ -13,6 +13,8 @@ class Table:
     quotechar = '"'
     limit = 1000
 
+
+
     #==================static & preset========================
     #see static location, preset, get and set static variable
     #记得缓存上次打开的目录地址
@@ -381,8 +383,19 @@ class Table:
             n = wid(self)
             self.sepmap = inilist(n, '\n')
         else:
+            if isinstance(j,str):
+                j = self._modicolinput(j)
             self.sepmap[j] = sep
-            self.setlenmapj(j)
+            self._setlenmapj(j)
+
+    def setsep(self,**kwargs):
+        for key in kwargs:
+            self.setsepmap(key,kwargs[key])
+
+    def setlen(self, **kwargs):
+        for key in kwargs:
+            index = self._modicolinput(key)
+            self.lenmap[index]= kwargs[key]
 
     #set & track lenmap
 
@@ -402,7 +415,7 @@ class Table:
                 if maxlen(row[j], self.sepmap[j]) == self.lenmap[j]:
                     self.lenmap[j] = max([maxlen(v[j], self.sepmap[j]) for v in self.array2d])
 
-    def setlenmapj(self, j):
+    def _setlenmapj(self, j):
         # set lenmap by col
         if self.lenmap is not None:
             self.lenmap[j] = max([maxlen(v[j], self.sepmap[j]) for v in self.array2d])
@@ -877,7 +890,7 @@ class Table:
         return Table(result)
 
     def join(self,other,on =None):
-        return self._join(other,on,mod = "nature")
+        return self._join(other,on,mod = "natural")
 
     def ljoin(self,other,on =None):
         return self._join(other,on,mod = "left")
@@ -988,7 +1001,7 @@ class Table:
             else:
                 raise Exception("where should be a function or None")
             #result
-            self.degroup()
+            self.ungroup()
             result.enableprint()
             #print some thing to notify
             return result
@@ -1049,7 +1062,7 @@ class Table:
                 return result
             #print("SELECT {} from <{}>".format(",".join(result.gethead()), self.name))
 
-    def orderby(self, key=None, reverse=False, func=None):
+    def orderby(self, key=None, reverse=False):
     # after orderby will return self
         # change when next edition to seperate attribute name and normal entry
         # this should be done at origin vaiable not output another new
@@ -1057,19 +1070,18 @@ class Table:
         if key is None:
             self.array2d[1:]= sorted(self.array2d[1:],reverse)
         elif callable(key):
-            self.array2d[1:]= sorted(self.array2d[1:],key=key,reverse=reverse)
+
+            rs = [Row(self,i+1) for i in range(len(self.array2d[1:]))]
+            srs =sorted(rs,key=key,reverse=reverse)
+            sls = [r.array for r in srs]
+            self.array2d[1:]=sls
+            #self.array2d[1:]= sorted([Row(self,i+1) for i in range(len(self.array2d[1:]))],key=key,reverse=reverse)
         elif isinstance(key,str):
             s = slist(key)
             self._REatris(s)
             indice =[self._modicolinput(key) for key in s]
-            sfunction = None
-            if func is None:
-                def sfunction(r):
-                    return [r[i] for i in indice]
-            elif callable(func):
-                def sfunction(r):
-                    return [func(r[i]) for i in indice]
-
+            def sfunction(r):
+                return [r[i] for i in indice]
             self.array2d[1:] = sorted(self.array2d[1:],key=sfunction,reverse=reverse)
         #refresh all
         if self.keymap is not None:
@@ -1111,59 +1123,60 @@ class Table:
         else:
             raise  Exception("not have such group")
     #==================================graph part=============================
-    def setlib():
-        s = """
-try:
-    import matplotlib.pyplot as plot
-    global plt
-    plt = plot
-except Exception:
-    print("can not import matplotlib!")
-try:
-    from mpl_interaction import PanAndZoom
-    global PAZ
-    PAZ = PanAndZoom
-except:
-    print("please download mpl_interaction.py")
-"""
-        return exec(s, globals(), locals())
+    plt=None
+    paz=None
+    try:
+        import matplotlib.pyplot as plt
+    except:
+        print("please install matplotlib")
+        displayable = False
+    try:
+        from .mpl_interaction import PanAndZoom as paz
+    except:
+        print("please download mpl_interaction.py")
+        interable = False
+
     def bar(self, label, value):
-        Table.setlib()
         self.orderby(label)
-        fig, ax = plt.subplots()
-        ax.bar([str(v) for v in self.col(label)], self.col(value))
-        plt.xlabel(label)
-        plt.ylabel(value)
-        pan_zoom = PAZ(fig)
-        plt.show()
+        fig, ax = Table.plt.subplots()
+        ax.bar(self[:][label], self[:][value])
+        Table.plt.xlabel(label)
+        Table.plt.ylabel(value)
+        if Table.paz is not None:
+            pan_zoom = Table.paz(fig)
+        Table.plt.show()
+
     def pie(self, label, value):
-        Table.setlib()
-        fig, ax = plt.subplots()
-        ax.pie(self.col(value), labels=self.col(label), autopct='%1.1f%%')
-        pan_zoom = PAZ(fig)
-        plt.show()
+        fig, ax = Table.plt.subplots(figsize=(6,6))
+        ax.pie(self[:][value], labels=self[:][label], autopct='%1.1f%%')
+        if Table.paz is not None:
+            pan_zoom = Table.paz(fig)
+        Table.plt.show()
+
     def hist(self, value, low, up, num):
-        Table.setlib()
-        fig, ax = plt.subplots()
+        #another optional low up step
+        fig, ax = Table.plt.subplots()
         amount = up - low
         block = amount / num
         bins = [low + i * block for i in range(num + 2)]
-        ax.hist(self.col(value), bins, facecolor='green', edgecolor="yellowgreen")
-        plt.xlabel(value)
-        plt.ylabel("number")
-        pan_zoom = PAZ(fig)
-        plt.show()
+        ax.hist(self[:][value], bins, facecolor='green', edgecolor="yellowgreen")
+        Table.plt.xlabel(value)
+        Table.plt.ylabel("number")
+        if Table.paz is not None:
+            pan_zoom = Table.paz(fig)
+        Table.plt.show()
+
     def plot(self, x, y, line="."):
         # add polar coord
         # add multiple and lines
         # add spline
-        Table.setlib()
-        fig, ax = plt.subplots()
-        ax.plot(self.col(x), self.col(y), line)
-        plt.xlabel(x)
-        plt.ylabel(y)
-        pan_zoom = PAZ(fig)
-        plt.show()
+        fig, ax = Table.plt.subplots()
+        ax.plot(self[:][x], self[:][y], line)
+        Table.plt.xlabel(x)
+        Table.plt.ylabel(y)
+        if Table.paz is not None:
+            pan_zoom = Table.paz(fig)
+        Table.plt.show()
 
     def radar(self):
         # multiple in one graph
@@ -1192,6 +1205,8 @@ except:
         elif fparamod == None:
             for i in range(1, len(self) + 1):
                 self[i][j] = f(*args,**kwargs)
+        if self.lenmap is not None:
+            self._setlenmapj(j)
 
     def shuffle(self):
         if self.bindmap is not None:
