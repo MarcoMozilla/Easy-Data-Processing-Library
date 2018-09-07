@@ -12,6 +12,7 @@ class Table:
     delimiter = ','
     quotechar = '"'
     limit = 1000
+    precision=5
 
 
 
@@ -103,8 +104,11 @@ class Table:
         file = open(fname, "r", encoding=Table.coding, newline='')
         lines = csv.reader(file, delimiter=Table.delimiter, quotechar=Table.quotechar)
         if castmap !=None:
+
             row = next(lines)
             #print(row)
+            if Table.coding=="utf-8":
+                row[0]=row[0].replace("\ufeff","")
             vlist = row
             result.append(vlist)
             for row in lines:
@@ -120,7 +124,8 @@ class Table:
         #pprint(result)
         result = Table(result, name, printable)
         t3 = time()
-        print("READ <{}> FROM {} takes {} + {}".format(name, fname,t2-t1,t3-t2))
+        print("READ <{}> FROM {} takes {} + {}".format(name, fname,round(t2-t1,Table.precision),round(t3-t2,Table.precision)))
+        result.castmap=castmap
         return result
 
     def save(self, name=None):
@@ -504,6 +509,14 @@ class Table:
         newrow = inilist(wid(self), None)
         self.array2d.insert(i, newrow)
         self._setlenmapi(i)
+
+    def append(self,value):
+        self.addrow()
+        if isinstance(value,list):
+            self[-1][:]=[value]
+        else:
+            self[-1][0]=value
+
     def addrows(self, n, i=-1):
         for x in range(n):
             self.addrow(i)
@@ -823,6 +836,7 @@ class Table:
             l = list(set(self.colmap) - set(mm[0]))
             r = list(set(other.colmap) - set(mm[1]))
             lmrm = [l, mm[0], r, mm[1]]
+        print(lmrm)
         selfsmap = self.getsearchmap(lmrm[1])
         othersmap = other.getsearchmap(lmrm[3])
         selfset = set(selfsmap)
