@@ -111,6 +111,7 @@ class Table:
                 row[0]=row[0].replace("\ufeff","")
             vlist = row
             result.append(vlist)
+            #print(result)
             for row in lines:
                 #print(row)
                 vlist = [castmap[i](row[i]) for i in range(len(row))]
@@ -119,6 +120,8 @@ class Table:
             for row in lines:
                 vlist =[valueof(s) for s in row]
                 result.append(vlist)
+            if Table.coding=="utf-8":
+                result[0][0]=result[0][0].replace("\ufeff","")
         file.close()
         t2 = time()
         #pprint(result)
@@ -1076,6 +1079,17 @@ class Table:
                 return result
             #print("SELECT {} from <{}>".format(",".join(result.gethead()), self.name))
 
+    def makedict(self,kname,vname):
+        d={}
+        for r in range(1,len(self)+1):
+            key= self[r][kname]
+            value=self[r][vname]
+            if key not in d:
+                d[key]=value
+            else:
+                raise Exception("duplicate keys")
+        return d
+   
     def orderby(self, key=None, reverse=False):
     # after orderby will return self
         # change when next edition to seperate attribute name and normal entry
