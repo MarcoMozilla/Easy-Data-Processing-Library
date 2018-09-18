@@ -133,6 +133,8 @@ class Table:
 
     def save(self, name=None):
         t1 = time()
+        if Table.coding=="utf-8":
+            t[0][0]="\ufeff"+t[0][0]
         # ask for ensure!!!
         if self.name is None and name is None:
             raise Exception("give a name for the array2d to save")
@@ -474,6 +476,20 @@ class Table:
             self.array2d[i].insert(j, None)
         # track lenmap
         self.lenmap.insert(j, 4)
+        
+        # name row 0 and track colmap
+        i=1
+        while "new"+str(i) in self.colmap:
+            i+=1
+        newcol="new"+str(i)
+        
+        self.array2d[0][j]=newcol
+        self.colmap[newcol]=j
+        
+        #track sepmap
+        self.sepmap.append("\n")
+
+        
     def addcols(self, n, i=-1):
         for x in range(n):
             self.addcol(i)
@@ -1089,7 +1105,8 @@ class Table:
             else:
                 raise Exception("duplicate keys")
         return d
-   
+
+   
     def orderby(self, key=None, reverse=False):
     # after orderby will return self
         # change when next edition to seperate attribute name and normal entry
