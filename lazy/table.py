@@ -4,7 +4,7 @@ from .row import *
 from .rows import *
 from .keymap import *
 from .groupmap import *
-from time import*
+from time import *
 ###############################################################
 
 class Table:
@@ -55,6 +55,10 @@ class Table:
 
         self.keymap = None
         self.groupmap = None
+
+        #the follow statement might not work
+        if isinstance(array2d,Table):
+            self = array2d
 
         if not array2d:
             pass
@@ -131,10 +135,10 @@ class Table:
         result.castmap=castmap
         return result
 
-    def save(self, name=None):
+    def save(self, name=None,show=True):
         t1 = time()
         if Table.coding=="utf-8":
-            t[0][0]="\ufeff"+t[0][0]
+            self[0][0]="\ufeff"+self[0][0]
         # ask for ensure!!!
         if self.name is None and name is None:
             raise Exception("give a name for the array2d to save")
@@ -148,9 +152,25 @@ class Table:
         file.close()
 
         t2 = time()
-        print("SAVE <{}> TO {} takes {}".format(self.name, fname,t2-t1))
+        if show:
+            print("SAVE <{}> TO {} takes {}".format(self.name, fname,t2-t1))
         return
 
+    def savea(self,show=False):
+        t1 = time()
+        if self.name is None and name is None:
+            raise Exception("give a name for the array2d to save")
+        fname = self.name + ".csv"
+        file = open(fname, "a", encoding=Table.coding, newline='')
+        lines = csv.writer(file, delimiter=Table.delimiter, quotechar=Table.quotechar, quoting=csv.QUOTE_MINIMAL)
+        row  = self.array2d[-1]
+        lines.writerow(row)
+        file.close()
+        t2 = time()
+        if show:
+            print("SAVE <{}> {}-th row TO {} takes {}".format(self.name,len(self), fname,t2-t1))
+        return
+        
     #===================================valid checking part============================
     def _REatri(self, a):
         return a in self.colmap
@@ -531,10 +551,7 @@ class Table:
 
     def append(self,value):
         self.addrow()
-        if isinstance(value,list):
-            self[-1][:]=[value]
-        else:
-            self[-1][0]=value
+        self[-1][:]=value
 
     def addrows(self, n, i=-1):
         for x in range(n):
