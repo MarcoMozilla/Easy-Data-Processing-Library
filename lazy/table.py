@@ -1,11 +1,25 @@
-import csv
-from random import *
 from .row import *
 from .rows import *
 from .keymap import *
 from .groupmap import *
-from time import *
+from .mpl_interaction import PanAndZoom as paz
+from mpl_toolkits.mplot3d import Axes3D
+from matplotlib.font_manager import FontManager
+from matplotlib.font_manager import FontProperties
+from scipy.interpolate import spline
+from sklearn.decomposition import PCA
+
+
+import csv
+import random
+import time
+import matplotlib.pyplot as plt
+import matplotlib.text as text
+import matplotlib.patches as mp
+import numpy as np
+
 ###############################################################
+
 
 class Table:
     coding = "utf-8"
@@ -14,7 +28,8 @@ class Table:
     limit = 1000
     precision=5
 
-
+    graph_rownum=0
+    graph_colnum=0
 
     #==================static & preset========================
     #see static location, preset, get and set static variable
@@ -36,7 +51,7 @@ class Table:
         pprint(fund)
 
     #=========================initialize============================
-    def __init__(self, array2d=None, name=None, printable=True):
+    def __init__(self, array2d, name=None, printable=True):
 
         self.name = name
         self.array2d = []
@@ -102,7 +117,7 @@ class Table:
 
     #================================read & save==============================
     def read(name, castmap=None, printable = True):
-        t1 =time()
+        t1 =time.time()
         result = []
         fname = name + ".csv"
         file = open(fname, "r", encoding=Table.coding, newline='')
@@ -127,16 +142,16 @@ class Table:
             if Table.coding=="utf-8":
                 result[0][0]=result[0][0].replace("\ufeff","")
         file.close()
-        t2 = time()
+        t2 = time.time()
         #pprint(result)
         result = Table(result, name, printable)
-        t3 = time()
+        t3 = time.time()
         print("READ <{}> FROM {} takes {} + {}".format(name, fname,round(t2-t1,Table.precision),round(t3-t2,Table.precision)))
         result.castmap=castmap
         return result
 
     def save(self, name=None,show=True):
-        t1 = time()
+        t1 = time.time()
         if Table.coding=="utf-8":
             self[0][0]="\ufeff"+self[0][0]
         # ask for ensure!!!
@@ -151,13 +166,13 @@ class Table:
             lines.writerow(row)
         file.close()
 
-        t2 = time()
+        t2 = time.time()
         if show:
             print("SAVE <{}> TO {} takes {}".format(self.name, fname,t2-t1))
         return
 
     def savea(self,show=False):
-        t1 = time()
+        t1 = time.stime()
         if self.name is None and name is None:
             raise Exception("give a name for the array2d to save")
         fname = self.name + ".csv"
@@ -166,7 +181,7 @@ class Table:
         row  = self.array2d[-1]
         lines.writerow(row)
         file.close()
-        t2 = time()
+        t2 = time.time()
         if show:
             print("SAVE <{}> {}-th row TO {} takes {}".format(self.name,len(self), fname,t2-t1))
         return
@@ -495,7 +510,8 @@ class Table:
         for i in range(0, len(self) + 1):
             self.array2d[i].insert(j, None)
         # track lenmap
-        self.lenmap.insert(j, 4)
+        if self.lenmap is not None and isinstance(self.lenmap,list):
+            self.lenmap.insert(j, 4)
         
         # name row 0 and track colmap
         i=1
@@ -507,7 +523,8 @@ class Table:
         self.colmap[newcol]=j
         
         #track sepmap
-        self.sepmap.append("\n")
+        if self.sepmap is not None and isinstance(self.sepmap,list):
+            self.sepmap.append("\n")
 
         
     def addcols(self, n, i=-1):
@@ -534,7 +551,8 @@ class Table:
         for i in range(0, len(self) + 1):
             del self.array2d[i][j]
         # track lenmap
-        del self.lenmap[j]
+        if self.lenmap is not None and isinstance(self.lenmap,list):
+            del self.lenmap[j]
 
     def addrow(self, i=-1):
         i = self._recaprowindex(i) + 1 if i < 0 else i
@@ -571,6 +589,7 @@ class Table:
     def setentry(self, i, j, value):
         i = len(self) + 1 + i if i < 0 else i
         j = wid(self) + 1 + j if j < 0 else j
+        #print(value)
         if self.array2d[i][j] == value:
             return
         # print("i,j = ",i,j)
@@ -1185,35 +1204,353 @@ class Table:
         else:
             raise  Exception("not have such group")
     #==================================graph part=============================
-    plt=None
-    paz=None
-    try:
-        import matplotlib.pyplot as plt
-    except:
-        print("please install matplotlib")
-        displayable = False
-    try:
-        from .mpl_interaction import PanAndZoom as paz
-    except:
-        print("please download mpl_interaction.py")
-        interable = False
+    axrownum=1
+    axcolnum=1
+    axcurnum=0
+    fig=None
+    ax=None
+    font='Adobe Heiti Std'
+    fontsize=10
+    ticksize=5
+    fontprop=FontProperties(font)
+    figrotate=False
 
-    def bar(self, label, value):
-        self.orderby(label)
-        fig, ax = Table.plt.subplots()
-        ax.bar(self[:][label], self[:][value])
-        Table.plt.xlabel(label)
-        Table.plt.ylabel(value)
-        if Table.paz is not None:
-            pan_zoom = Table.paz(fig)
-        Table.plt.show()
+    def setfont(font=font,size=fontsize):
+        Table.font=font
+        Table.fontsize=size
+        Table.fontprop=FontProperties(font)
+
+    def map_rotate(index):
+        c=(index-1)%Table.axrownum
+        r=(index-1)//Table.axrownum
+        result=c*Table.axcolnum+r+1
+        return result
+    
+    def nextax(projection=None):
+        Table.axcurnum+=1
+        if Table.figrotate:
+            index=Table.map_rotate(Table.axcurnum)
+            Table.ax=Table.fig.add_subplot(Table.axrownum,Table.axcolnum,index,projection=projection)
+        else:
+            Table.ax=Table.fig.add_subplot(Table.axcolnum,Table.axrownum,Table.axcurnum,projection=projection)
+        Table.ax.axis('off')
+        return Table.ax
+
+    
+
+    def getax():
+        return Table.ax
+
+    
+
+    def setfig(row,col,figsize=None,adjust=[0.1,0.1,0.9,0.9,0.5,0.5]):
+        Table.axrownum= row
+        Table.axcolnum= col
+        Table.axcurnum= 0
+        Table.fig=plt.figure(figsize=figsize)
+        Table.fig.pan_zoom=paz(Table.fig)
+        plt.subplots_adjust(*adjust)
+        Table.fig.tight_layout()
+
+    #you need plt.show() to show the figure
+    #==================
+    def _preplot(new,mod=None):
+        if Table.fig is None:
+            Table.setfig(1,1)
+        if new:
+            ax=Table.nextax(projection = mod) 
+        else:
+            ax=Table.getax()
+        ax.tick_params(labelsize=Table.ticksize)
+        ax.axis('on')
+        return ax
+
+
+    def bar(self, x, y, title=None, new=True, **kwargs):
+
+        #plt.rc("font",family=Table.font,size=Table.fontsize)
+        ax=Table._preplot(new)
+        if title is not None and isinstance(title,str):
+            ax.set_title(title,fontproperties=Table.font,fontsize=Table.fontsize)
+
+        if not isinstance(y, list):
+            ax.bar(self[:][x], self[:][y], **kwargs)
+
+
+
+            ax.set_xticklabels(self[:][x], fontproperties=Table.font, fontsize=Table.fontsize)
+
+            ax.set_ylabel(y, fontproperties=Table.font, fontsize=Table.fontsize)
+            ax.set_xlabel(x, fontproperties=Table.font, fontsize=Table.fontsize)
+            ax.tick_params(labelsize=Table.fontsize)
+            
+            
+        else:
+            color=kwargs["color"]
+            del kwargs["color"]
+            position=np.arange(len(self))
+            w=1/(len(y) + 1)
+            for i in range(len(y)):
+                v=y[i]
+                ax.bar(position+w*i, self[:][v],width=w,color=color[i],**kwargs)
+
+            ax.set_xticklabels(self[:][x], fontproperties=Table.font, fontsize=Table.fontsize)
+
+            ax.set_xticks(position + w * (len(y) - 1) / 2)
+            ax.tick_params(labelsize=Table.fontsize)
+            
+            ax.set_xlabel(x, fontproperties=Table.font, fontsize=Table.fontsize)
+            hds=[mp.Patch(color=color[i], label=y[i]) for i in range(len(y))]
+            ax.legend(handles=hds,prop=Table.fontprop,fontsize=Table.fontsize)
+
+
+    def smooth(x,y,num):
+        xs = np.linspace(min(x),max(x),int(num*len(x)))
+        ys = spline(x,y,xs)
+        return xs,ys
+
+
+    def plot(self, x, y, title=None,label=None,smoothindex = None, new=True, **kwargs):
+        ax=Table._preplot(new)
+      
+        if title is not None and isinstance(title,str):
+            ax.set_title(title,fontproperties=Table.font,fontsize=Table.fontsize)
+            
+        if not isinstance(y, list):
+
+            if smoothindex is None:
+                ax.plot(self[:][x], self[:][y], **kwargs)
+            else:
+                xs,ys = Table.smooth(self[:][x], self[:][y], smoothindex)
+                ax.plot(xs,ys,**kwargs)
+            
+            #font properties at next line will change font of x ticks
+            ax.set_xticklabels(self[:][x], fontsize=Table.fontsize)
+            
+            ax.set_ylabel(y, fontproperties=Table.font, fontsize=Table.fontsize)
+            ax.set_xlabel(x, fontproperties=Table.font, fontsize=Table.fontsize)
+            ax.tick_params(labelsize=Table.fontsize)
+
+            if label is not None:
+                label=str(label)
+                if not hasattr(Table.ax,"hds"):
+                    Table.ax.hds=[mp.Patch(color=kwargs["color"], label=y)]
+                else:
+                    Table.ax.hds+=[mp.Patch(color=kwargs["color"], label=y)]
+                    ax.set_ylabel('')
+                    ax.legend(handles=Table.ax.hds,prop=Table.fontprop,fontsize=Table.fontsize)
+
+        else:
+            color=kwargs["color"]
+            del kwargs["color"]
+            
+            for i in range(len(y)):
+                v=y[i]
+
+                if smoothindex is None:
+                    ax.plot(self[:][x], self[:][v], color=color[i], **kwargs)
+                else:
+                    xs,ys = Table.smooth(self[:][x], self[:][v], smoothindex)
+                    
+                    
+                    ax.plot(xs,ys,**kwargs,color=color[i],**kwargs)
+                    
+            #param fontproperties at next line will change font of x ticks
+            ax.set_xticklabels(self[:][x], fontsize=Table.fontsize)
+            ax.tick_params(labelsize=Table.fontsize)
+            
+            ax.set_xlabel(x, fontproperties=Table.font, fontsize=Table.fontsize)
+
+            if label is None:
+                label = y
+            
+            hds=[mp.Patch(color=color[i], label=str(label[i])) for i in range(len(y))]
+            ax.legend(handles=hds,prop=Table.fontprop,fontsize=Table.fontsize)
+
+    def scatter(self, x, y, title=None, size=10, label=None,new=True, **kwargs):
+        ax=Table._preplot(new)
+        
+        kwargs["s"]=s=[size]*len(self)
+        if title is not None and isinstance(title,str):
+            ax.set_title(title,fontproperties=Table.font,fontsize=Table.fontsize)
+            
+        if not isinstance(y, list):
+            ax.scatter(self[:][x], self[:][y], **kwargs)
+
+            #font properties at next line will change font of x ticks
+            ax.set_xticklabels(self[:][x], fontsize=Table.fontsize)
+            
+            ax.set_ylabel(y, fontproperties=Table.font, fontsize=Table.fontsize)
+            ax.set_xlabel(x, fontproperties=Table.font, fontsize=Table.fontsize)
+            ax.tick_params(labelsize=Table.fontsize)
+
+            if label is not None:
+                label=str(label)
+                if not hasattr(Table.ax,"hds"):
+                    Table.ax.hds=[mp.Patch(color=kwargs["color"], label=label)]
+                else:
+                    Table.ax.hds+=[mp.Patch(color=kwargs["color"], label=label)]
+                    ax.legend(handles=Table.ax.hds,prop=Table.fontprop,fontsize=Table.fontsize)
+
+                    ax.set_ylabel('')
+        else:
+            color=kwargs["color"]
+            del kwargs["color"]
+            
+            for i in range(len(y)):
+                v=y[i]
+                ax.scatter(self[:][x], self[:][v], color=color[i], **kwargs)
+
+            #param fontproperties at next line will change font of x ticks
+            ax.set_xticklabels(self[:][x], fontsize=Table.fontsize)
+            ax.tick_params(labelsize=Table.fontsize)
+            
+            ax.set_xlabel(x, fontproperties=Table.font, fontsize=Table.fontsize)
+
+
+            if label is None:
+                label = y
+            hds=[mp.Patch(color=color[i], label=str(label[i])) for i in range(len(y))]
+            ax.legend(handles=hds,prop=Table.fontprop,fontsize=Table.fontsize)
+        
+    
+    def scatter3d(self,x,y,z,label=None,title=None,size=10,new=True,**kwargs):
+        ax=Table._preplot(new,mod="3d")
+
+
+        if label is None:
+            label=self.name
+        
+        kwargs["s"]=s=[size]*len(self)
+        if title is not None and isinstance(title,str):
+            ax.set_title(title,fontproperties=Table.font,fontsize=Table.fontsize)
+            
+        ax.scatter(self[:][x],self[:][y],self[:][z],**kwargs)
+            
+        #font properties at next line will change font of x ticks
+            
+        ax.set_xlabel(x,fontproperties=Table.font,fontsize=Table.fontsize)
+        ax.set_ylabel(y,fontproperties=Table.font,fontsize=Table.fontsize)
+        ax.set_zlabel(z,fontproperties=Table.font,fontsize=Table.fontsize)
+        ax.tick_params(labelsize=Table.fontsize)
+
+        if label is not None:
+            label=str(label)
+            if not hasattr(Table.ax,"hds"):
+                Table.ax.hds=[mp.Patch(color=kwargs["color"],label=label)]
+            else:
+                Table.ax.hds+=[mp.Patch(color=kwargs["color"],label=label)]
+                ax.legend(handles=Table.ax.hds,prop=Table.fontprop,fontsize=Table.fontsize)
+
+    def count2dict(self,target):
+        a=self[:][target]
+        res={}
+        for e in a:
+            if e in res:
+                res[e]+=1
+            else:
+                res[e]=1
+        return res
+
+    def count2table(self,target):
+        d=self.count2dict(target)
+        t=Table([["num","target"]])
+        for key in d:
+            sub=[key,d[key]]
+            t.append(sub)
+        return t
+
+    def index(self,col="index"):
+        self.addcol()
+        self[0][-1]=col
+        for i in range(1,len(self)+1):
+            self[i][-1]=i
+        
+        
+
+    #fix upper ticks
+    #ring plot directly results in PCA ect!
+    def ring(self,labels,x, title=None,mod="label", new=True,width=0.382,pctdistance=0.81,autopct='%1.1f%%',**kwargs):
+        #recommend arg color,
+        
+        ax=Table._preplot(new)
+        kwargs["wedgeprops"]={"width":width,'linewidth': 3, "edgecolor":'w'}
+        kwargs["textprops"]={"fontproperties":Table.font, "fontsize":Table.fontsize}
+        kwargs["autopct"]=autopct
+        kwargs["pctdistance"]=pctdistance
+        
+        
+        if title is not None and isinstance(title,str):
+            ax.set_title(title,fontproperties=Table.font,fontsize=Table.fontsize)
+
+        if mod=="on":
+            wedges,text_label,text_value= ax.pie(self[:][x],labels=self[:][labels],radius=1,**kwargs)
+        else:
+            wedges,text_label,text_value= ax.pie(self[:][x],radius=1,**kwargs)
+        #pprint(wedges)
+        ax.set(aspect="equal")
+
+        #add multi ring in future
+        lbs=self[:][labels]
+        if mod=="legend":
+            
+            hds=hds=[mp.Patch(color=kwargs["colors"][i], label=str(lbs[i])) for i in range(len(lbs))]
+            ax.legend(handles=hds,prop=Table.fontprop,fontsize=Table.fontsize)
+        elif mod=="label":
+            kw = {"xycoords":'data',
+                  "textcoords":'data',
+                  "arrowprops":{"arrowstyle":"-"},
+                "bbox":{"boxstyle":"square,pad=0.3", "fc":"w", "ec":"k", "lw":0.72},
+                "zorder":0,
+                "va":"center"
+                }
+            for i, p in enumerate(wedges):
+                ang = (p.theta2 - p.theta1)/2. + p.theta1
+                y = np.sin(np.deg2rad(ang))
+                x = np.cos(np.deg2rad(ang))
+
+                horizontalalignment = {-1: "right", 1: "left"}[int(np.sign(x))]
+
+                connectionstyle = "angle,angleA=0,angleB={}".format(ang)
+
+                kw["arrowprops"].update({"connectionstyle": connectionstyle})
+
+                ax.annotate(lbs[i],
+                            xy=(x, y),
+                            xytext=(1.35*np.sign(x), 1.4*y),
+                            horizontalalignment=horizontalalignment,
+                            fontproperties=Table.font,
+                            fontsize=Table.fontsize,
+                            **kw)
+            
+        elif mod=="on":
+            pass
+        else:
+            raise Exception("mod = legend/label/on")
+        
+            
 
     def pie(self, label, value):
-        fig, ax = Table.plt.subplots(figsize=(6,6))
+        fig, ax = plt.subplots(figsize=(6,6))
         ax.pie(self[:][value], labels=self[:][label], autopct='%1.1f%%')
-        if Table.paz is not None:
-            pan_zoom = Table.paz(fig)
-        Table.plt.show()
+        
+        pan_zoom = paz(fig)
+        plt.show()
+        
+    def PCA(self,features,k=2,new=True,**kwargs):
+        
+        data=self[:][features]
+        pca=PCA(n_components=k)
+        z=pca.fit_transform(data)    
+
+        for i in range(k):
+            self.addcol()
+            self[0][-1]="PCA"+str(i+1)
+
+        self[:][-k:-1]=[list(r) for r in z]
+
+        
+
 
     def hist(self, value, low, up, num):
         #another optional low up step
@@ -1228,30 +1565,15 @@ class Table:
             pan_zoom = Table.paz(fig)
         Table.plt.show()
 
-    def plot(self, x, y, line="."):
-        # add polar coord
-        # add multiple and lines
-        # add spline
-        fig, ax = Table.plt.subplots()
-        ax.plot(self[:][x], self[:][y], line)
-        Table.plt.xlabel(x)
-        Table.plt.ylabel(y)
-        if Table.paz is not None:
-            pan_zoom = Table.paz(fig)
-        Table.plt.show()
 
-    def radar(self):
-        # multiple in one graph
-        pass
-    def polar_radar(self):
-        pass
-    def hist2d(self):
-        pass
-    def bar2d(self):
-        pass
-    def scatter(self):
+    def plot3d(self):
         pass
 
+    def hist3d(self):
+        pass
+    def bar3d(self):
+        pass
+    
 
 
 
@@ -1276,9 +1598,12 @@ class Table:
         groupmap = self.groupmap
         keymap = self.keymap
         head = self.array2d.pop(0)
-        shuffle(self.array2d)
+        random.shuffle(self.array2d)
         self.array2d.insert(0, head)
         if groupmap is not None:
             self._setgroup(groupmap.group)
         if keymap is not None:
             self.setkey(keymap.key)
+
+
+
