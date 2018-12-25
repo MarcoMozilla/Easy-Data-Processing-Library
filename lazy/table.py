@@ -1214,6 +1214,7 @@ class Table:
     ticksize=5
     fontprop=FontProperties(font)
     figrotate=False
+    pretable=None
 
     def setfont(font=font,size=fontsize):
         Table.font=font
@@ -1266,7 +1267,9 @@ class Table:
         return ax
 
 
+    
     def bar(self, x, y, title=None, new=True, **kwargs):
+        
 
         #plt.rc("font",family=Table.font,size=Table.fontsize)
         ax=Table._preplot(new)
@@ -1302,7 +1305,8 @@ class Table:
             ax.set_xlabel(x, fontproperties=Table.font, fontsize=Table.fontsize)
             hds=[mp.Patch(color=color[i], label=y[i]) for i in range(len(y))]
             ax.legend(handles=hds,prop=Table.fontprop,fontsize=Table.fontsize)
-
+        #remember last table
+        Table.pretable=self
 
     def smooth(x,y,num):
         xs = np.linspace(min(x),max(x),int(num*len(x)))
@@ -1325,7 +1329,7 @@ class Table:
                 ax.plot(xs,ys,**kwargs)
             
             #font properties at next line will change font of x ticks
-            ax.set_xticklabels(self[:][x], fontsize=Table.fontsize)
+            #ax.set_xticklabels(self[:][x], fontsize=Table.fontsize)
             
             ax.set_ylabel(y, fontproperties=Table.font, fontsize=Table.fontsize)
             ax.set_xlabel(x, fontproperties=Table.font, fontsize=Table.fontsize)
@@ -1337,9 +1341,9 @@ class Table:
                     Table.ax.hds=[mp.Patch(color=kwargs["color"], label=y)]
                 else:
                     Table.ax.hds+=[mp.Patch(color=kwargs["color"], label=y)]
-                    ax.set_ylabel('')
                     ax.legend(handles=Table.ax.hds,prop=Table.fontprop,fontsize=Table.fontsize)
-
+                    if Table.pretable is self:
+                        ax.set_ylabel('')
         else:
             color=kwargs["color"]
             del kwargs["color"]
@@ -1356,7 +1360,7 @@ class Table:
                     ax.plot(xs,ys,**kwargs,color=color[i],**kwargs)
                     
             #param fontproperties at next line will change font of x ticks
-            ax.set_xticklabels(self[:][x], fontsize=Table.fontsize)
+            #ax.set_xticklabels(self[:][x], fontsize=Table.fontsize)
             ax.tick_params(labelsize=Table.fontsize)
             
             ax.set_xlabel(x, fontproperties=Table.font, fontsize=Table.fontsize)
@@ -1366,8 +1370,10 @@ class Table:
             
             hds=[mp.Patch(color=color[i], label=str(label[i])) for i in range(len(y))]
             ax.legend(handles=hds,prop=Table.fontprop,fontsize=Table.fontsize)
+        #remember last table
+        Table.pretable=self
 
-    def scatter(self, x, y, title=None, size=10, label=None,new=True, **kwargs):
+    def scatter(self, x, y, title=None, size=10, label=None,new=True,**kwargs):
         ax=Table._preplot(new)
         
         kwargs["s"]=s=[size]*len(self)
@@ -1378,7 +1384,7 @@ class Table:
             ax.scatter(self[:][x], self[:][y], **kwargs)
 
             #font properties at next line will change font of x ticks
-            ax.set_xticklabels(self[:][x], fontsize=Table.fontsize)
+            #ax.set_xticklabels(self[:][x], fontsize=Table.fontsize)
             
             ax.set_ylabel(y, fontproperties=Table.font, fontsize=Table.fontsize)
             ax.set_xlabel(x, fontproperties=Table.font, fontsize=Table.fontsize)
@@ -1392,17 +1398,20 @@ class Table:
                     Table.ax.hds+=[mp.Patch(color=kwargs["color"], label=label)]
                     ax.legend(handles=Table.ax.hds,prop=Table.fontprop,fontsize=Table.fontsize)
 
-                    ax.set_ylabel('')
+                    #change all labels declare at params
+                    if Table.pretable is self:
+                        ax.set_ylabel('')
         else:
             color=kwargs["color"]
             del kwargs["color"]
+            kwargs["c"]=color
             
             for i in range(len(y)):
                 v=y[i]
                 ax.scatter(self[:][x], self[:][v], color=color[i], **kwargs)
 
             #param fontproperties at next line will change font of x ticks
-            ax.set_xticklabels(self[:][x], fontsize=Table.fontsize)
+            #ax.set_xticklabels(self[:][x], fontsize=Table.fontsize)
             ax.tick_params(labelsize=Table.fontsize)
             
             ax.set_xlabel(x, fontproperties=Table.font, fontsize=Table.fontsize)
@@ -1412,6 +1421,9 @@ class Table:
                 label = y
             hds=[mp.Patch(color=color[i], label=str(label[i])) for i in range(len(y))]
             ax.legend(handles=hds,prop=Table.fontprop,fontsize=Table.fontsize)
+
+        #remember last table
+        Table.pretable=self
         
     
     def scatter3d(self,x,y,z,label=None,title=None,size=10,new=True,**kwargs):
@@ -1427,7 +1439,7 @@ class Table:
             
         ax.scatter(self[:][x],self[:][y],self[:][z],**kwargs)
             
-        #font properties at next line will change font of x ticks
+
             
         ax.set_xlabel(x,fontproperties=Table.font,fontsize=Table.fontsize)
         ax.set_ylabel(y,fontproperties=Table.font,fontsize=Table.fontsize)
@@ -1441,6 +1453,8 @@ class Table:
             else:
                 Table.ax.hds+=[mp.Patch(color=kwargs["color"],label=label)]
                 ax.legend(handles=Table.ax.hds,prop=Table.fontprop,fontsize=Table.fontsize)
+        #remember last table
+        Table.pretable=self
 
     def count2dict(self,target):
         a=self[:][target]
@@ -1527,6 +1541,8 @@ class Table:
             pass
         else:
             raise Exception("mod = legend/label/on")
+        #remember last table
+        Table.pretable=self
         
             
 
@@ -1593,8 +1609,7 @@ class Table:
             self._setlenmapj(j)
 
     def shuffle(self):
-        if self.bindmap is not None:
-            raise Exception("debind self all for shuffle")
+        # adding bind map for related value of tables
         groupmap = self.groupmap
         keymap = self.keymap
         head = self.array2d.pop(0)
