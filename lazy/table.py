@@ -8,15 +8,21 @@ from matplotlib.font_manager import FontManager
 from matplotlib.font_manager import FontProperties
 from scipy.interpolate import spline
 from sklearn.decomposition import PCA
-
+from sklearn.model_selection import train_test_split as tts
+from sklearn.linear_model import LogisticRegression
+from sklearn.linear_model import LinearRegression
+from sklearn.tree import DecisionTreeClassifier
+from sklearn.neighbors import KNeighborsClassifier
 
 import csv
+import sys
 import random
 import time
 import matplotlib.pyplot as plt
 import matplotlib.text as text
 import matplotlib.patches as mp
 import numpy as np
+import math
 
 ###############################################################
 
@@ -172,7 +178,7 @@ class Table:
         return
 
     def savea(self,show=False):
-        t1 = time.stime()
+        t1 = time.time()
         if self.name is None and name is None:
             raise Exception("give a name for the array2d to save")
         fname = self.name + ".csv"
@@ -1214,7 +1220,6 @@ class Table:
     ticksize=5
     fontprop=FontProperties(font)
     figrotate=False
-    pretable=None
 
     def setfont(font=font,size=fontsize):
         Table.font=font
@@ -1268,7 +1273,7 @@ class Table:
 
 
     
-    def bar(self, x, y, title=None, new=True, **kwargs):
+    def bar(self, xname, yname, title=None, new=True, **kwargs):
         
 
         #plt.rc("font",family=Table.font,size=Table.fontsize)
@@ -1276,15 +1281,15 @@ class Table:
         if title is not None and isinstance(title,str):
             ax.set_title(title,fontproperties=Table.font,fontsize=Table.fontsize)
 
-        if not isinstance(y, list):
-            ax.bar(self[:][x], self[:][y], **kwargs)
+        if not isinstance(yname, list):
+            ax.bar(self[:][xname], self[:][yname], **kwargs)
 
 
 
-            ax.set_xticklabels(self[:][x], fontproperties=Table.font, fontsize=Table.fontsize)
+            ax.set_xticklabels(self[:][xname], fontproperties=Table.font, fontsize=Table.fontsize)
 
-            ax.set_ylabel(y, fontproperties=Table.font, fontsize=Table.fontsize)
-            ax.set_xlabel(x, fontproperties=Table.font, fontsize=Table.fontsize)
+            ax.set_ylabel(yname, fontproperties=Table.font, fontsize=Table.fontsize)
+            ax.set_xlabel(xname, fontproperties=Table.font, fontsize=Table.fontsize)
             ax.tick_params(labelsize=Table.fontsize)
             
             
@@ -1292,21 +1297,19 @@ class Table:
             color=kwargs["color"]
             del kwargs["color"]
             position=np.arange(len(self))
-            w=1/(len(y) + 1)
-            for i in range(len(y)):
-                v=y[i]
+            w=1/(len(yname) + 1)
+            for i in range(len(yname)):
+                v=yname[i]
                 ax.bar(position+w*i, self[:][v],width=w,color=color[i],**kwargs)
 
-            ax.set_xticklabels(self[:][x], fontproperties=Table.font, fontsize=Table.fontsize)
+            ax.set_xticklabels(self[:][xname], fontproperties=Table.font, fontsize=Table.fontsize)
 
-            ax.set_xticks(position + w * (len(y) - 1) / 2)
+            ax.set_xticks(position + w * (len(yname) - 1) / 2)
             ax.tick_params(labelsize=Table.fontsize)
             
-            ax.set_xlabel(x, fontproperties=Table.font, fontsize=Table.fontsize)
-            hds=[mp.Patch(color=color[i], label=y[i]) for i in range(len(y))]
+            ax.set_xlabel(xname, fontproperties=Table.font, fontsize=Table.fontsize)
+            hds=[mp.Patch(color=color[i], label=yname[i]) for i in range(len(yname))]
             ax.legend(handles=hds,prop=Table.fontprop,fontsize=Table.fontsize)
-        #remember last table
-        Table.pretable=self
 
     def smooth(x,y,num):
         xs = np.linspace(min(x),max(x),int(num*len(x)))
@@ -1314,147 +1317,142 @@ class Table:
         return xs,ys
 
 
-    def plot(self, x, y, title=None,label=None,smoothindex = None, new=True, **kwargs):
+    def plot(self, xname, yname, title=None, legend=None, smoothindex = None, new=True, **kwargs):
         ax=Table._preplot(new)
       
         if title is not None and isinstance(title,str):
             ax.set_title(title,fontproperties=Table.font,fontsize=Table.fontsize)
             
-        if not isinstance(y, list):
+        if not isinstance(yname, list):
 
             if smoothindex is None:
-                ax.plot(self[:][x], self[:][y], **kwargs)
+                ax.plot(self[:][xname], self[:][yname], **kwargs)
             else:
-                xs,ys = Table.smooth(self[:][x], self[:][y], smoothindex)
+                xs,ys = Table.smooth(self[:][xname], self[:][yname], smoothindex)
                 ax.plot(xs,ys,**kwargs)
             
-            #font properties at next line will change font of x ticks
-            #ax.set_xticklabels(self[:][x], fontsize=Table.fontsize)
+            #font properties at next line will change font of xname ticks
+            #ax.set_xticklabels(self[:][xname], fontsize=Table.fontsize)
             
-            ax.set_ylabel(y, fontproperties=Table.font, fontsize=Table.fontsize)
-            ax.set_xlabel(x, fontproperties=Table.font, fontsize=Table.fontsize)
+            ax.set_ylabel(yname, fontproperties=Table.font, fontsize=Table.fontsize)
+            ax.set_xlabel(xname, fontproperties=Table.font, fontsize=Table.fontsize)
             ax.tick_params(labelsize=Table.fontsize)
 
-            if label is not None:
-                label=str(label)
+            if legend is not None:
+                legend=str(legend)
                 if not hasattr(Table.ax,"hds"):
-                    Table.ax.hds=[mp.Patch(color=kwargs["color"], label=y)]
+                    Table.ax.hds=[mp.Patch(color=kwargs["color"], label=yname)]
                 else:
-                    Table.ax.hds+=[mp.Patch(color=kwargs["color"], label=y)]
+                    Table.ax.hds+=[mp.Patch(color=kwargs["color"], label=yname)]
                     ax.legend(handles=Table.ax.hds,prop=Table.fontprop,fontsize=Table.fontsize)
-                    if Table.pretable is self:
+
+                    # remove if ylabel is not consistent
+                    if ax.get_ylabel() != yname:
                         ax.set_ylabel('')
         else:
             color=kwargs["color"]
             del kwargs["color"]
             
-            for i in range(len(y)):
-                v=y[i]
+            for i in range(len(yname)):
+                v=yname[i]
 
                 if smoothindex is None:
-                    ax.plot(self[:][x], self[:][v], color=color[i], **kwargs)
+                    ax.plot(self[:][xname], self[:][v], color=color[i], **kwargs)
                 else:
-                    xs,ys = Table.smooth(self[:][x], self[:][v], smoothindex)
+                    xs,ys = Table.smooth(self[:][xname], self[:][v], smoothindex)
                     
                     
                     ax.plot(xs,ys,**kwargs,color=color[i],**kwargs)
                     
-            #param fontproperties at next line will change font of x ticks
-            #ax.set_xticklabels(self[:][x], fontsize=Table.fontsize)
+            #param fontproperties at next line will change font of xname ticks
+            #ax.set_xticklabels(self[:][xname], fontsize=Table.fontsize)
             ax.tick_params(labelsize=Table.fontsize)
             
-            ax.set_xlabel(x, fontproperties=Table.font, fontsize=Table.fontsize)
+            ax.set_xlabel(xname, fontproperties=Table.font, fontsize=Table.fontsize)
 
-            if label is None:
-                label = y
+            #legend of legend
+            if legend is None:
+                legend = yname
             
-            hds=[mp.Patch(color=color[i], label=str(label[i])) for i in range(len(y))]
+            hds=[mp.Patch(color=color[i], label=str(legend[i])) for i in range(len(yname))]
             ax.legend(handles=hds,prop=Table.fontprop,fontsize=Table.fontsize)
-        #remember last table
-        Table.pretable=self
 
-    def scatter(self, x, y, title=None, size=10, label=None,new=True,**kwargs):
+
+    #add dict as legend input to have a customized legend without modify data
+    def scatter(self, xname, yname, title=None, size=10, legend=None, new=True, **kwargs):
         ax=Table._preplot(new)
         
         kwargs["s"]=s=[size]*len(self)
         if title is not None and isinstance(title,str):
             ax.set_title(title,fontproperties=Table.font,fontsize=Table.fontsize)
             
-        if not isinstance(y, list):
-            ax.scatter(self[:][x], self[:][y], **kwargs)
+        if not isinstance(yname, list):
+            ax.scatter(self[:][xname], self[:][yname], **kwargs)
 
-            #font properties at next line will change font of x ticks
-            #ax.set_xticklabels(self[:][x], fontsize=Table.fontsize)
+            #font properties at next line will change font of xname ticks
+            #ax.set_xticklabels(self[:][xname], fontsize=Table.fontsize)
             
-            ax.set_ylabel(y, fontproperties=Table.font, fontsize=Table.fontsize)
-            ax.set_xlabel(x, fontproperties=Table.font, fontsize=Table.fontsize)
+            ax.set_ylabel(yname, fontproperties=Table.font, fontsize=Table.fontsize)
+            ax.set_xlabel(xname, fontproperties=Table.font, fontsize=Table.fontsize)
             ax.tick_params(labelsize=Table.fontsize)
 
-            if label is not None:
-                label=str(label)
+            if legend is not None:
+                legend=str(legend)
                 if not hasattr(Table.ax,"hds"):
-                    Table.ax.hds=[mp.Patch(color=kwargs["color"], label=label)]
+                    Table.ax.hds=[mp.Patch(color=kwargs["color"], label=legend)]
                 else:
-                    Table.ax.hds+=[mp.Patch(color=kwargs["color"], label=label)]
+                    Table.ax.hds+=[mp.Patch(color=kwargs["color"], label=legend)]
                     ax.legend(handles=Table.ax.hds,prop=Table.fontprop,fontsize=Table.fontsize)
 
-                    #change all labels declare at params
-                    if Table.pretable is self:
+                    #remove if ylabel is not consistent
+                    if ax.get_ylabel() != yname:
                         ax.set_ylabel('')
         else:
             color=kwargs["color"]
             del kwargs["color"]
-            kwargs["c"]=color
             
-            for i in range(len(y)):
-                v=y[i]
-                ax.scatter(self[:][x], self[:][v], color=color[i], **kwargs)
+            for i in range(len(yname)):
+                v=yname[i]
+                ax.scatter(self[:][xname], self[:][v], color=color[i], **kwargs)
 
-            #param fontproperties at next line will change font of x ticks
-            #ax.set_xticklabels(self[:][x], fontsize=Table.fontsize)
+            #param fontproperties at next line will change font of xname ticks
+            #ax.set_xticklabels(self[:][xname], fontsize=Table.fontsize)
             ax.tick_params(labelsize=Table.fontsize)
             
-            ax.set_xlabel(x, fontproperties=Table.font, fontsize=Table.fontsize)
-
-
-            if label is None:
-                label = y
-            hds=[mp.Patch(color=color[i], label=str(label[i])) for i in range(len(y))]
+            ax.set_xlabel(xname, fontproperties=Table.font, fontsize=Table.fontsize)
+            
+            #legend of legend
+            if legend is None:
+                legend = yname
+            hds=[mp.Patch(color=color[i], label=str(legend[i])) for i in range(len(yname))]
             ax.legend(handles=hds,prop=Table.fontprop,fontsize=Table.fontsize)
 
-        #remember last table
-        Table.pretable=self
         
     
-    def scatter3d(self,x,y,z,label=None,title=None,size=10,new=True,**kwargs):
+    def scatter3d(self, xname, yname, zname, legend=None, title=None, size=10, new=True, **kwargs):
         ax=Table._preplot(new,mod="3d")
 
-
-        if label is None:
-            label=self.name
+        if legend is None:
+            legend=self.name
         
         kwargs["s"]=s=[size]*len(self)
         if title is not None and isinstance(title,str):
             ax.set_title(title,fontproperties=Table.font,fontsize=Table.fontsize)
             
-        ax.scatter(self[:][x],self[:][y],self[:][z],**kwargs)
-            
+        ax.scatter(self[:][xname], self[:][yname], self[:][zname], **kwargs)
 
-            
-        ax.set_xlabel(x,fontproperties=Table.font,fontsize=Table.fontsize)
-        ax.set_ylabel(y,fontproperties=Table.font,fontsize=Table.fontsize)
-        ax.set_zlabel(z,fontproperties=Table.font,fontsize=Table.fontsize)
+        ax.set_xlabel(xname, fontproperties=Table.font, fontsize=Table.fontsize)
+        ax.set_ylabel(yname, fontproperties=Table.font, fontsize=Table.fontsize)
+        ax.set_zlabel(zname, fontproperties=Table.font, fontsize=Table.fontsize)
         ax.tick_params(labelsize=Table.fontsize)
 
-        if label is not None:
-            label=str(label)
+        if legend is not None:
+            legend=str(legend)
             if not hasattr(Table.ax,"hds"):
-                Table.ax.hds=[mp.Patch(color=kwargs["color"],label=label)]
+                Table.ax.hds=[mp.Patch(color=kwargs["color"], label=legend)]
             else:
-                Table.ax.hds+=[mp.Patch(color=kwargs["color"],label=label)]
+                Table.ax.hds+=[mp.Patch(color=kwargs["color"], label=legend)]
                 ax.legend(handles=Table.ax.hds,prop=Table.fontprop,fontsize=Table.fontsize)
-        #remember last table
-        Table.pretable=self
 
     def count2dict(self,target):
         a=self[:][target]
@@ -1468,7 +1466,7 @@ class Table:
 
     def count2table(self,target):
         d=self.count2dict(target)
-        t=Table([["num","target"]])
+        t=Table([["num",target]])
         for key in d:
             sub=[key,d[key]]
             t.append(sub)
@@ -1479,36 +1477,29 @@ class Table:
         self[0][-1]=col
         for i in range(1,len(self)+1):
             self[i][-1]=i
-        
-        
 
-    #fix upper ticks
-    #ring plot directly results in PCA ect!
-    def ring(self,labels,x, title=None,mod="label", new=True,width=0.382,pctdistance=0.81,autopct='%1.1f%%',**kwargs):
+    def ring(self, labelname, valuename,labelwrap=None, title=None, mod="label", new=True, width=0.382, pctdistance=0.81, autopct='%1.1f%%', **kwargs):
         #recommend arg color,
-        
         ax=Table._preplot(new)
         kwargs["wedgeprops"]={"width":width,'linewidth': 3, "edgecolor":'w'}
         kwargs["textprops"]={"fontproperties":Table.font, "fontsize":Table.fontsize}
         kwargs["autopct"]=autopct
         kwargs["pctdistance"]=pctdistance
-        
-        
         if title is not None and isinstance(title,str):
             ax.set_title(title,fontproperties=Table.font,fontsize=Table.fontsize)
 
         if mod=="on":
-            wedges,text_label,text_value= ax.pie(self[:][x],labels=self[:][labels],radius=1,**kwargs)
+            wedges,text_label,text_value= ax.pie(self[:][valuename], labels=self[:][labelname], radius=1, **kwargs)
         else:
-            wedges,text_label,text_value= ax.pie(self[:][x],radius=1,**kwargs)
+            wedges,text_label,text_value= ax.pie(self[:][valuename], radius=1, **kwargs)
         #pprint(wedges)
         ax.set(aspect="equal")
 
         #add multi ring in future
-        lbs=self[:][labels]
+        lbs=[str(labelwrap(label)) if callable(labelwrap)  else str(label) for label in self[:][labelname]]
         if mod=="legend":
             
-            hds=hds=[mp.Patch(color=kwargs["colors"][i], label=str(lbs[i])) for i in range(len(lbs))]
+            hds=[mp.Patch(color=kwargs["colors"][i], label=str(lbs[i])) for i in range(len(lbs))]
             ax.legend(handles=hds,prop=Table.fontprop,fontsize=Table.fontsize)
         elif mod=="label":
             kw = {"xycoords":'data',
@@ -1521,17 +1512,17 @@ class Table:
             for i, p in enumerate(wedges):
                 ang = (p.theta2 - p.theta1)/2. + p.theta1
                 y = np.sin(np.deg2rad(ang))
-                x = np.cos(np.deg2rad(ang))
+                valuename = np.cos(np.deg2rad(ang))
 
-                horizontalalignment = {-1: "right", 1: "left"}[int(np.sign(x))]
+                horizontalalignment = {-1: "right", 1: "left"}[int(np.sign(valuename))]
 
                 connectionstyle = "angle,angleA=0,angleB={}".format(ang)
 
                 kw["arrowprops"].update({"connectionstyle": connectionstyle})
 
                 ax.annotate(lbs[i],
-                            xy=(x, y),
-                            xytext=(1.35*np.sign(x), 1.4*y),
+                            xy=(valuename, y),
+                            xytext=(1.35 * np.sign(valuename), 1.4 * y),
                             horizontalalignment=horizontalalignment,
                             fontproperties=Table.font,
                             fontsize=Table.fontsize,
@@ -1541,18 +1532,13 @@ class Table:
             pass
         else:
             raise Exception("mod = legend/label/on")
-        #remember last table
-        Table.pretable=self
-        
             
 
-    def pie(self, label, value):
-        fig, ax = plt.subplots(figsize=(6,6))
-        ax.pie(self[:][value], labels=self[:][label], autopct='%1.1f%%')
-        
-        pan_zoom = paz(fig)
-        plt.show()
-        
+    def pie(self, labelname, valuename, labelwrap=None, title=None, mod="label", new=True, width=1, pctdistance=0.81,autopct='%1.1f%%', **kwargs):
+        self.ring(labelname, valuename, labelwrap=labelwrap, title=title, mod=mod, new=new, width=width, pctdistance=pctdistance,autopct=autopct, **kwargs)
+
+
+        """
     def PCA(self,features,k=2,new=True,**kwargs):
         
         data=self[:][features]
@@ -1564,7 +1550,7 @@ class Table:
             self[0][-1]="PCA"+str(i+1)
 
         self[:][-k:-1]=[list(r) for r in z]
-
+        """
         
 
 
@@ -1581,17 +1567,272 @@ class Table:
             pan_zoom = Table.paz(fig)
         Table.plt.show()
 
-
     def plot3d(self):
         pass
-
     def hist3d(self):
         pass
     def bar3d(self):
         pass
-    
 
 
+    #=================================statistic=============================
+
+    def minmaxnorm(self,colname):
+        if isinstance(colname,list):
+            for cname in colname:
+                self.minmaxnorm(cname)
+        else:
+            a=self[:][colname]
+            a=np.array(a)
+            maxi=np.max(a)
+            mini=np.min(a)
+            dis=maxi-mini
+            final=(a-mini)/dis
+            self[:][colname]=list(final)
+
+    def meanstdnorm(self,colname):
+        if isinstance(colname,list):
+            for cname in colname:
+                self.meanstdnorm(cname)
+        else:
+            a=self[:][colname]
+            a=np.array(a)
+            mean=np.mean(a)
+            std=np.std(a)
+            final=(a-mean)/std
+            self[:][colname]=list(final)
+
+    def sum1norm(self,colname):
+        if isinstance(colname,list):
+            for cname in colname:
+                self.sum1norm(cname)
+        else:
+            a=self[:][colname]
+            a=np.array(a)
+            total=np.sum(a)
+            final=a/total
+            self[:][colname]=list(final)
+
+    def logwash(self,colname):
+        if isinstance(colname,list):
+            for cname in colname:
+                self.logwash(cname)
+        else:
+            a=self[:][colname]
+            a=np.array(a)
+            final=np.log(a)
+            self[:][colname]=list(final)
+
+    def abswash(self,colname):
+        if isinstance(colname,list):
+            for cname in colname:
+                self.abswash(cname)
+        else:
+            a=self[:][colname]
+            a=np.array(a)
+            final=np.abs(a)
+            self[:][colname]=list(final)
+
+    def sqrtwash(self,colname):
+        if isinstance(colname,list):
+            for cname in colname:
+                self.sqrtwash(cname)
+        else:
+            a=self[:][colname]
+            a=np.array(a)
+            final=np.sqrt(a)
+            self[:][colname]=list(final)
+
+    def invwash(self,colname):
+        if isinstance(colname,list):
+            for cname in colname:
+                self.invwash(cname)
+        else:
+            a=self[:][colname]
+            #do not use nan in data it will treated as True
+            good = all(a)
+            if not good:
+                raise Exception("contain '0' type value at col[{}]".format(colname))
+            a=np.array(a)
+            final=1/a
+            self[:][colname]=list(final)
+
+    def epswash(self,colname,eps=0.1):
+        if isinstance(colname,list):
+            for cname in colname:
+                self.epswash(cname)
+        else:
+            a=self[:][colname]
+            a=np.array(a)
+            final=a+eps
+            self[:][colname]=list(final)
+
+    #=============================machine learning==================================
+    kernel=lambda x:x
+
+    kernel_support_types={'int32','int64','float32','float64'}
+    def getinvkernel(X):
+        if X.dtype.name not in Table.kernel_support_types:
+            raise Exception("only {} is supported".format(Table.kernel_support_types))
+        #check non zero col num
+        rx=X.T
+        goodcol=[]
+        for i in range(len(rx)):
+            if all(rx[i]):
+                goodcol.append(i)
+        collect=[]
+        for index in goodcol:
+            collect.append(1/rx[index])
+        collect=np.array(collect).T
+
+        return collect
+
+    def getlogkernel(X):
+        if X.dtype.name not in Table.kernel_support_types:
+            raise Exception("only {} is supported".format(Table.kernel_support_types))
+        #check non zero col num
+        rx=X.T
+        goodcol=[]
+        for i in range(len(rx)):
+            if np.min(rx[i])>0:
+                goodcol.append(i)
+        collect=[]
+        for index in goodcol:
+            collect.append(np.log(rx[index]))
+        collect=np.array(collect).T
+        #print(collect)
+        return collect
+
+    def kerneladd(a,b):
+        return np.concatenate((a,b), axis=1)
+
+    def kernelmul(X, A):
+        k = []
+        for i in range(len(X)):
+            v = X[i]
+            u = A[i]
+
+            v.shape = v.shape[0], 1
+            u.shape = u.shape[0], 1
+            sub = v * u.T
+            sub.shape = (sub.shape[0] * sub.shape[1],)
+            k.append(sub)
+        k = np.array(k)
+        return k
+
+    def makekernel(X, invmul=True, inv=False, log=False, poly=None):
+
+        more=[]
+        if inv or invmul:
+            down= Table.getinvkernel(X)
+            if inv:
+                more.append(down)
+            if invmul:
+                sub = Table.kernelmul(X, down)
+                more.append(sub)
+        if log:
+            more.append(Table.getlogkernel(X))
+        if poly:
+            sub=X
+            for i in range(poly):
+                sub=Table.kernelmul(sub,X)
+                more.append(sub)
+
+        resX=X
+        for E in more:
+            resX=Table.kerneladd(resX,E)
+
+        return resX
+
+    def setkernel(inv=False, invmul=False, log=False, poly=None):
+        def kernel(X):
+            res=Table.makekernel(X, inv=inv, invmul=invmul, log=log, poly=poly)
+            return res
+        Table.kernel=kernel
+        return kernel
+
+    #============================classify=========================================
+    def classify_learning(self, features, label, model, test_size=0.33, show=True):
+        #features is list of colnames
+        if not isinstance(features,list):
+            features=[features]
+
+        if isinstance(label,list):
+            print("you give a list but algo only learn the first argument as label")
+            label=label[0]
+
+        ofdata=np.array(self[:][features])
+        fdata = Table.kernel(ofdata)
+        if show:
+            print("kernel shape: {}→{}".format(ofdata.shape, fdata.shape))
+        ldata=np.array(self[:][label]).astype(int)
+        Xtrain, Xtest, ytrain, ytest = tts(fdata, ldata, test_size=test_size, random_state=42)
+
+        clf=model.fit(Xtrain,ytrain)
+        score = clf.score(Xtest, ytest)
+        if show:
+            print("accuracy:{}".format(score))
+        def predictor(Xdata):
+            if isinstance(Xdata,Table):
+                Xdata = np.array(t[:][features])
+            elif isinstance(Xdata,list) or isinstance(Xdata,np.array):
+                Xdata=np.array(Xdata)
+                if len(Xdata.shape)==1:
+                    raise Exception("Xdata should be 2d")
+            else:
+                raise Exception("Xdata should be 2d")
+            Xdata=Table.kernel(Xdata)
+            result=clf.predict(Xdata)
+            result=list(result)
+            return result
+        predictor.score=score
+        return predictor
+
+    #===============================regression=========================================
+    def regression_score(ypred,ytest):
+        dis=np.abs(ypred-ytest)
+        u=dis.mean()
+        m=dis.max()
+        return u,m
+
+    def regression_learning(self, features, label, model, test_size=0.33, show=True):
+        #features is list of colnames
+        if not isinstance(features,list):
+            features=[features]
+
+        if isinstance(label,list):
+            print("you give a list but algo only learn the first argument as label")
+            label=label[0]
+
+        ofdata=np.array(self[:][features])
+        fdata = Table.kernel(ofdata)
+        if show:
+            print("kernel shape: {}→{}".format(ofdata.shape, fdata.shape))
+        ldata=np.array(self[:][label]).astype(int)
+        Xtrain, Xtest, ytrain, ytest = tts(fdata, ldata, test_size=test_size, random_state=42)
+
+        clf = model.fit(Xtrain, ytrain)
+        #ytest
+        ypred = clf.predict(Xtest)
+        score=Table.regression_score(ypred,ytest)
+        if show:
+            print("ave:{}\nmax:{}".format(score[0],score[1]))
+        #
+        def predictor(Xdata):
+            if isinstance(Xdata,Table):
+                Xdata = np.array(t[:][features])
+            elif isinstance(Xdata,list) or isinstance(Xdata,np.array):
+                Xdata=np.array(Xdata)
+                if len(Xdata.shape)==1:
+                    raise Exception("Xdata should be 2d")
+            else:
+                raise Exception("Xdata should be 2d")
+            Xdata=Table.kernel(Xdata)
+            result=clf.predict(Xdata)
+            result=list(result)
+            return result
+        predictor.score=score
+        return predictor
 
     #==============================apply & extend function part =======================
     def apply(self, key, fparamod=None, f=None, *args,**kwargs):
