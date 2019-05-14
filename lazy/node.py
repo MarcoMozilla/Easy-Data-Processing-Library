@@ -1,6 +1,7 @@
 import json
 import pprint
 import time
+import os
 
 class Node(dict):
     def __new__(cls,data):
@@ -76,11 +77,23 @@ class Node(dict):
 
 class Root:
 
+    path=""
     precision = 2
+    encoding = "utf-8"
 
-    def __init__(self,body,name=None):
+    def fsee(self):
+        #see all the object
+        pprint.pprint(self.__dict__)
+
+    def see(self):
+        d=self.__dict__.copy()
+        d["body"]="......"
+        pprint.pprint(d)
+
+    def __init__(self,body,name=None,subpath=""):
         self.body  = Node(body)
         self.name = name
+        self.subpath = subpath
 
     def __str__(self):
         heads = "Root<{}>:\n".format(self.name)
@@ -89,26 +102,53 @@ class Root:
     def __repr__(self):
         return str(self)
 
-    def read(name):
+    def select(self,keynames):
+        if isinstance(keynames, list) or isinstance(keynames,tuple):
+            cur = self.body
+            for keyname in keynames:
+                cur = cur[keyname]
+            if isinstance(cur,dict) or isinstance(cur,list):
+                return Root(cur.copy())
+            else:
+                return Root(cur)
+        else:
+            raise Exception("keynames must be list of string or int")
+
+
+    def read(name,subpath=""):
         t1 = time.time()
-        fname = name + ".json"
-        with open(fname, "r") as read_file:
+        fname = Root.path + subpath + name + ".json"
+        with open(fname, "r",encoding=Root.encoding) as read_file:
             k = json.load(read_file)
         t2 = time.time()
-        res = Root(k,name)
+        res = Root(k,name,subpath)
         t3 = time.time()
         print("READ <{}> FROM {} takes {} + {}".format(name, fname, round(t2 - t1, Root.precision),round(t3 - t2, Root.precision)))
         return res
 
-    def save(self,name=None,show=True):
-        if name is not None:
-            self.name=name
-        if self.name is None:
-            raise Exception("Dont have name yet")
+    def save(self,name=None,show=True,subpath =None):
+        if name is None:
+            if self.name is None:
+                raise Exception("give a name for the node to save")
+        else:
+            if isinstance(name, str):
+                self.name = name
+            else:
+                raise Exception("name should be string")
+
+        if subpath:
+            self.subpath = subpath
+
         t1 = time.time()
-        fname = self.name+".json"
-        with open(fname, "w") as write_file:
-            write_file.write(str(self.body).replace("\'", "\""))
+
+        fullpath = Root.path+self.subpath
+        if (fullpath != "") and (not os.path.isdir(fullpath)):
+            os.mkdir(fullpath)
+
+        fname = Root.path + self.subpath + self.name+".json"
+        with open(fname, "w",encoding=Root.encoding) as write_file:
+            json.dump(self.body, write_file)
+
         t2 = time.time()
         if show:
             print("SAVE <{}> TO {} takes {}".format(self.name, fname,round(t2-t1,Root.precision)))

@@ -7,13 +7,9 @@ from mpl_toolkits.mplot3d import Axes3D
 from matplotlib.font_manager import FontManager
 from matplotlib.font_manager import FontProperties
 from scipy.interpolate import spline
-from sklearn.decomposition import PCA
-from sklearn.model_selection import train_test_split as tts
-from sklearn.linear_model import LogisticRegression
-from sklearn.linear_model import LinearRegression
-from sklearn.tree import DecisionTreeClassifier
-from sklearn.neighbors import KNeighborsClassifier
+from cycler import cycler
 
+import matplotlib as mpl
 import csv
 import sys
 import random
@@ -23,17 +19,17 @@ import matplotlib.text as text
 import matplotlib.patches as mp
 import numpy as np
 import math
-
+import os
 ###############################################################
 
 
 class Table:
-    coding = "utf-8"
-    delimiter = ','
+    encoding = "utf-8"
+    delimiter = '\t'
     quotechar = '"'
     limit = 1000
     precision=5
-
+    path = ""
     graph_rownum=0
     graph_colnum=0
 
@@ -57,11 +53,12 @@ class Table:
         pprint(fund)
 
     #=========================initialize============================
-    def __init__(self, array2d, name=None, printable=True):
+    def __init__(self, array2d, name=None, printable=True,subpath = ""):
 
         self.name = name
         self.array2d = []
         self.colmap = {}
+        self.subpath = ""
 
         # index for iterator
         self.imax = -1
@@ -122,17 +119,17 @@ class Table:
             raise Exception("head must be init")
 
     #================================read & save==============================
-    def read(name, castmap=None, printable = True):
+    def read(name, castmap=None, printable = True,subpath = ""):
         t1 =time.time()
         result = []
-        fname = name + ".csv"
-        file = open(fname, "r", encoding=Table.coding, newline='')
+        fname = Table.path + subpath + name + ".csv"
+        file = open(fname, "r", encoding=Table.encoding, newline='')
         lines = csv.reader(file, delimiter=Table.delimiter, quotechar=Table.quotechar)
         if castmap !=None:
 
             row = next(lines)
             #print(row)
-            if Table.coding=="utf-8":
+            if Table.encoding== "utf-8":
                 row[0]=row[0].replace("\ufeff","")
             vlist = row
             result.append(vlist)
@@ -145,28 +142,42 @@ class Table:
             for row in lines:
                 vlist =[valueof(s) for s in row]
                 result.append(vlist)
-            if Table.coding=="utf-8":
+            if Table.encoding== "utf-8":
                 result[0][0]=result[0][0].replace("\ufeff","")
         file.close()
         t2 = time.time()
         #pprint(result)
-        result = Table(result, name, printable)
+        result = Table(result, name, printable,subpath=subpath)
         t3 = time.time()
         print("READ <{}> FROM {} takes {} + {}".format(name, fname,round(t2-t1,Table.precision),round(t3-t2,Table.precision)))
         result.castmap=castmap
         return result
 
-    def save(self, name=None,show=True):
+    def save(self, name=None,show=True,subpath=None):
         t1 = time.time()
-        if Table.coding=="utf-8":
+        if Table.encoding== "utf-8":
+            self[0][0]=self[0][0].replace("\ufeff","")
             self[0][0]="\ufeff"+self[0][0]
         # ask for ensure!!!
-        if self.name is None and name is None:
-            raise Exception("give a name for the array2d to save")
-        elif self.name is None and isinstance(name, str):
-            self.name = name
-        fname = self.name + ".csv"
-        file = open(fname, "w", encoding=Table.coding, newline='')
+        if name is None:
+            if self.name is None:
+                raise Exception("give a name for the node to save")
+        else:
+            if isinstance(name, str):
+                self.name = name
+            else:
+                raise Exception("name should be string")
+
+        if subpath:
+            self.subpath= subpath
+
+        fullpath = Table.path+self.subpath
+        if (fullpath != "") and (not os.path.isdir(fullpath)):
+            os.mkdir(fullpath)
+        fname = Table.path+self.subpath + self.name + ".csv"
+
+
+        file = open(fname, "w", encoding=Table.encoding, newline='')
         lines = csv.writer(file, delimiter=Table.delimiter, quotechar=Table.quotechar, quoting=csv.QUOTE_MINIMAL)
         for row in self.array2d:
             lines.writerow(row)
@@ -174,15 +185,15 @@ class Table:
 
         t2 = time.time()
         if show:
-            print("SAVE <{}> TO {} takes {}".format(self.name, fname,t2-t1))
+            print("SAVE <{}> TO {} takes {}".format(self.name, fname,round(t2-t1,Table.precision)))
         return
 
     def savea(self,show=False):
         t1 = time.time()
         if self.name is None and name is None:
             raise Exception("give a name for the array2d to save")
-        fname = self.name + ".csv"
-        file = open(fname, "a", encoding=Table.coding, newline='')
+        fname =Table.path+self.name + ".csv"
+        file = open(fname, "a", encoding=Table.encoding, newline='')
         lines = csv.writer(file, delimiter=Table.delimiter, quotechar=Table.quotechar, quoting=csv.QUOTE_MINIMAL)
         row  = self.array2d[-1]
         lines.writerow(row)
@@ -230,30 +241,35 @@ class Table:
     # function in this block will not work or minimal information when len(self)> Table.threshold
     #used for debug
     def fsee(self):
+        #see all the object
         if len(self)<=self.limit:
             pprint(self.__dict__)
         else:
             raise Exception("len(self) > limit full print is not support")
 
     def asee(self):
+        #see array2d
         if len(self) <= self.limit:
             pprint(self.array2d)
         else:
             raise Exception("len(self) > limit full print is not support")
 
     def ksee(self):
+        #see keymap
         if len(self) <= self.limit:
             pprint(self.keymap)
         else:
             raise Exception("len(self) > limit full print is not support")
 
     def gsee(self):
+        #see groupmap
         if len(self) <= self.limit:
             pprint(self.groupmap)
         else:
             raise Exception("len(self) > limit full print is not support")
 
     def see(self):
+        #see summary
         d=self.__dict__.copy()
         d["array2d"]="......"
         if d["keymap"] is not None:
@@ -859,6 +875,7 @@ class Table:
     #=====================================SQL part=========================
 
     def rename(self, s):
+        #rename the attributes name
         s = decomp(s)
         self._REatris(s[0])
         for i in range(len(s[0])):
@@ -1003,13 +1020,14 @@ class Table:
         return set([tuple(r) for r in self])
 
     def __or__(self, other):
-        selfset = self._getset()
-        otherset = other._getset()
+        selfset = self.keys()
+        otherset = other.keys()
         sss = selfset | otherset
         result = [self.gethead().copy()]
         for v in sss:
             result.append(list(v))
         return Table(result)
+    
     def __and__(self, other):
         selfset = self._getset()
         otherset = other._getset()
@@ -1018,6 +1036,7 @@ class Table:
         for v in sss:
             result.append(list(v))
         return Table(result)
+    
     def __xor__(self, other):
         selfset = self._getset()
         otherset = other._getset()
@@ -1275,7 +1294,13 @@ class Table:
     
     def bar(self, xname, yname, title=None, new=True, **kwargs):
         
+        store = mpl.rcParams["axes.prop_cycle"]
 
+        if "color" in kwargs:
+            mpl.rcParams["axes.prop_cycle"] = cycler(color=kwargs["color"])
+            del kwargs["color"]
+
+        colorlist= [d["color"] for d in mpl.rcParams["axes.prop_cycle"].__dict__['_left']]
         #plt.rc("font",family=Table.font,size=Table.fontsize)
         ax=Table._preplot(new)
         if title is not None and isinstance(title,str):
@@ -1294,13 +1319,11 @@ class Table:
             
             
         else:
-            color=kwargs["color"]
-            del kwargs["color"]
             position=np.arange(len(self))
             w=1/(len(yname) + 1)
             for i in range(len(yname)):
                 v=yname[i]
-                ax.bar(position+w*i, self[:][v],width=w,color=color[i],**kwargs)
+                ax.bar(position+w*i, self[:][v],width=w,color=colorlist[i],**kwargs)
 
             ax.set_xticklabels(self[:][xname], fontproperties=Table.font, fontsize=Table.fontsize)
 
@@ -1308,8 +1331,9 @@ class Table:
             ax.tick_params(labelsize=Table.fontsize)
             
             ax.set_xlabel(xname, fontproperties=Table.font, fontsize=Table.fontsize)
-            hds=[mp.Patch(color=color[i], label=yname[i]) for i in range(len(yname))]
+            hds=[mp.Patch(color=colorlist[i], label=yname[i]) for i in range(len(yname))]
             ax.legend(handles=hds,prop=Table.fontprop,fontsize=Table.fontsize)
+        mpl.rcParams["axes.prop_cycle"] = store
 
     def smooth(x,y,num):
         xs = np.linspace(min(x),max(x),int(num*len(x)))
@@ -1319,7 +1343,15 @@ class Table:
 
     def plot(self, xname, yname, title=None, legend=None, smoothindex = None, new=True, **kwargs):
         ax=Table._preplot(new)
-      
+
+        store = mpl.rcParams["axes.prop_cycle"]
+
+        if "color" in kwargs:
+            mpl.rcParams["axes.prop_cycle"] = cycler(color=kwargs["color"])
+            del kwargs["color"]
+
+        colorlist= [d["color"] for d in mpl.rcParams["axes.prop_cycle"].__dict__['_left']]
+
         if title is not None and isinstance(title,str):
             ax.set_title(title,fontproperties=Table.font,fontsize=Table.fontsize)
             
@@ -1341,29 +1373,28 @@ class Table:
             if legend is not None:
                 legend=str(legend)
                 if not hasattr(Table.ax,"hds"):
-                    Table.ax.hds=[mp.Patch(color=kwargs["color"], label=yname)]
+                    Table.ax.hds=[mp.Patch(color=colorlist, label=yname)]
+                    ax.legend(handles=Table.ax.hds, prop=Table.fontprop, fontsize=Table.fontsize)
+
                 else:
-                    Table.ax.hds+=[mp.Patch(color=kwargs["color"], label=yname)]
+                    Table.ax.hds+=[mp.Patch(color=colorlist, label=yname)]
+
                     ax.legend(handles=Table.ax.hds,prop=Table.fontprop,fontsize=Table.fontsize)
 
                     # remove if ylabel is not consistent
                     if ax.get_ylabel() != yname:
                         ax.set_ylabel('')
         else:
-            color=kwargs["color"]
-            del kwargs["color"]
-            
             for i in range(len(yname)):
                 v=yname[i]
 
                 if smoothindex is None:
-                    ax.plot(self[:][xname], self[:][v], color=color[i], **kwargs)
+                    ax.plot(self[:][xname], self[:][v], color=colorlist[i], **kwargs)
                 else:
                     xs,ys = Table.smooth(self[:][xname], self[:][v], smoothindex)
-                    
-                    
-                    ax.plot(xs,ys,**kwargs,color=color[i],**kwargs)
-                    
+
+                    ax.plot(xs,ys,**kwargs,color=colorlist[i],**kwargs)
+
             #param fontproperties at next line will change font of xname ticks
             #ax.set_xticklabels(self[:][xname], fontsize=Table.fontsize)
             ax.tick_params(labelsize=Table.fontsize)
@@ -1374,14 +1405,68 @@ class Table:
             if legend is None:
                 legend = yname
             
-            hds=[mp.Patch(color=color[i], label=str(legend[i])) for i in range(len(yname))]
+            hds=[mp.Patch(color=colorlist[i], label=str(legend[i])) for i in range(len(yname))]
             ax.legend(handles=hds,prop=Table.fontprop,fontsize=Table.fontsize)
 
+        mpl.rcParams["axes.prop_cycle"] = store
+
+
+    def plotf(function,domain,num,xname="x", yname="y", title=None, legend=None, new=True, **kwargs):
+        ax=Table._preplot(new)
+        store = mpl.rcParams["axes.prop_cycle"]
+
+        if "color" in kwargs:
+            mpl.rcParams["axes.prop_cycle"] = cycler(color=kwargs["color"])
+            del kwargs["color"]
+
+        colorlist = [d["color"] for d in mpl.rcParams["axes.prop_cycle"].__dict__['_left']]
+
+        if title is not None and isinstance(title,str):
+            ax.set_title(title,fontproperties=Table.font,fontsize=Table.fontsize)
+
+
+        xs=[]
+        ys=[]
+        dis = (domain[1]-domain[0])/(num-1)
+        for i in range(num):
+            x= domain[0]+dis*i
+            y = function(x)
+            xs.append(x)
+            ys.append(y)
+
+
+        ax.plot(xs,ys, **kwargs)
+
+        #font properties at next line will change font of xname ticks
+        #ax.set_xticklabels(self[:][xname], fontsize=Table.fontsize)
+        ax.set_ylabel(yname, fontproperties=Table.font, fontsize=Table.fontsize)
+        ax.set_xlabel(xname, fontproperties=Table.font, fontsize=Table.fontsize)
+        ax.tick_params(labelsize=Table.fontsize)
+
+        if legend is not None:
+            legend=str(legend)
+            if not hasattr(Table.ax,"hds"):
+                Table.ax.hds=[mp.Patch(color=colorlist, label=yname)]
+            else:
+                Table.ax.hds+=[mp.Patch(color=colorlist, label=yname)]
+                ax.legend(handles=Table.ax.hds,prop=Table.fontprop,fontsize=Table.fontsize)
+
+                # remove if ylabel is not consistent
+                if ax.get_ylabel() != yname:
+                    ax.set_ylabel('')
+        mpl.rcParams["axes.prop_cycle"] = store
 
     #add dict as legend input to have a customized legend without modify data
     def scatter(self, xname, yname, title=None, size=10, legend=None, new=True, **kwargs):
         ax=Table._preplot(new)
-        
+        store = mpl.rcParams["axes.prop_cycle"]
+
+        if "color" in kwargs:
+            mpl.rcParams["axes.prop_cycle"] = cycler(color=kwargs["color"])
+            del kwargs["color"]
+
+        colorlist = [d["color"] for d in mpl.rcParams["axes.prop_cycle"].__dict__['_left']]
+
         kwargs["s"]=s=[size]*len(self)
         if title is not None and isinstance(title,str):
             ax.set_title(title,fontproperties=Table.font,fontsize=Table.fontsize)
@@ -1399,21 +1484,19 @@ class Table:
             if legend is not None:
                 legend=str(legend)
                 if not hasattr(Table.ax,"hds"):
-                    Table.ax.hds=[mp.Patch(color=kwargs["color"], label=legend)]
+                    Table.ax.hds=[mp.Patch(color=colorlist, label=legend)]
                 else:
-                    Table.ax.hds+=[mp.Patch(color=kwargs["color"], label=legend)]
+                    Table.ax.hds+=[mp.Patch(color=colorlist, label=legend)]
                     ax.legend(handles=Table.ax.hds,prop=Table.fontprop,fontsize=Table.fontsize)
 
                     #remove if ylabel is not consistent
                     if ax.get_ylabel() != yname:
                         ax.set_ylabel('')
         else:
-            color=kwargs["color"]
-            del kwargs["color"]
             
             for i in range(len(yname)):
                 v=yname[i]
-                ax.scatter(self[:][xname], self[:][v], color=color[i], **kwargs)
+                ax.scatter(self[:][xname], self[:][v], color=colorlist[i], **kwargs)
 
             #param fontproperties at next line will change font of xname ticks
             #ax.set_xticklabels(self[:][xname], fontsize=Table.fontsize)
@@ -1424,13 +1507,20 @@ class Table:
             #legend of legend
             if legend is None:
                 legend = yname
-            hds=[mp.Patch(color=color[i], label=str(legend[i])) for i in range(len(yname))]
+            hds=[mp.Patch(color=colorlist[i], label=str(legend[i])) for i in range(len(yname))]
             ax.legend(handles=hds,prop=Table.fontprop,fontsize=Table.fontsize)
 
-        
+        mpl.rcParams["axes.prop_cycle"] = store
     
     def scatter3d(self, xname, yname, zname, legend=None, title=None, size=10, new=True, **kwargs):
         ax=Table._preplot(new,mod="3d")
+        store = mpl.rcParams["axes.prop_cycle"]
+        if "color" in kwargs:
+            mpl.rcParams["axes.prop_cycle"] = cycler(color=kwargs["color"])
+            del kwargs["color"]
+
+        colorlist = [d["color"] for d in mpl.rcParams["axes.prop_cycle"].__dict__['_left']]
+
 
         if legend is None:
             legend=self.name
@@ -1449,10 +1539,12 @@ class Table:
         if legend is not None:
             legend=str(legend)
             if not hasattr(Table.ax,"hds"):
-                Table.ax.hds=[mp.Patch(color=kwargs["color"], label=legend)]
+                Table.ax.hds=[mp.Patch(color=colorlist, label=legend)]
             else:
-                Table.ax.hds+=[mp.Patch(color=kwargs["color"], label=legend)]
+                Table.ax.hds+=[mp.Patch(color=colorlist, label=legend)]
                 ax.legend(handles=Table.ax.hds,prop=Table.fontprop,fontsize=Table.fontsize)
+        mpl.rcParams["axes.prop_cycle"] = store
+
 
     def count2dict(self,target):
         a=self[:][target]
@@ -1481,6 +1573,14 @@ class Table:
     def ring(self, labelname, valuename,labelwrap=None, title=None, mod="label", new=True, width=0.382, pctdistance=0.81, autopct='%1.1f%%', **kwargs):
         #recommend arg color,
         ax=Table._preplot(new)
+
+        store = mpl.rcParams["axes.prop_cycle"]
+        if "color" in kwargs:
+            mpl.rcParams["axes.prop_cycle"] = cycler(color=kwargs["color"])
+            del kwargs["color"]
+
+        colorlist = [d["color"] for d in mpl.rcParams["axes.prop_cycle"].__dict__['_left']]
+
         kwargs["wedgeprops"]={"width":width,'linewidth': 3, "edgecolor":'w'}
         kwargs["textprops"]={"fontproperties":Table.font, "fontsize":Table.fontsize}
         kwargs["autopct"]=autopct
@@ -1499,7 +1599,7 @@ class Table:
         lbs=[str(labelwrap(label)) if callable(labelwrap)  else str(label) for label in self[:][labelname]]
         if mod=="legend":
             
-            hds=[mp.Patch(color=kwargs["colors"][i], label=str(lbs[i])) for i in range(len(lbs))]
+            hds=[mp.Patch(color=colorlist[i], label=str(lbs[i])) for i in range(len(lbs))]
             ax.legend(handles=hds,prop=Table.fontprop,fontsize=Table.fontsize)
         elif mod=="label":
             kw = {"xycoords":'data',
@@ -1538,22 +1638,6 @@ class Table:
         self.ring(labelname, valuename, labelwrap=labelwrap, title=title, mod=mod, new=new, width=width, pctdistance=pctdistance,autopct=autopct, **kwargs)
 
 
-        """
-    def PCA(self,features,k=2,new=True,**kwargs):
-        
-        data=self[:][features]
-        pca=PCA(n_components=k)
-        z=pca.fit_transform(data)    
-
-        for i in range(k):
-            self.addcol()
-            self[0][-1]="PCA"+str(i+1)
-
-        self[:][-k:-1]=[list(r) for r in z]
-        """
-        
-
-
     def hist(self, value, low, up, num):
         #another optional low up step
         fig, ax = Table.plt.subplots()
@@ -1573,266 +1657,6 @@ class Table:
         pass
     def bar3d(self):
         pass
-
-
-    #=================================statistic=============================
-
-    def minmaxnorm(self,colname):
-        if isinstance(colname,list):
-            for cname in colname:
-                self.minmaxnorm(cname)
-        else:
-            a=self[:][colname]
-            a=np.array(a)
-            maxi=np.max(a)
-            mini=np.min(a)
-            dis=maxi-mini
-            final=(a-mini)/dis
-            self[:][colname]=list(final)
-
-    def meanstdnorm(self,colname):
-        if isinstance(colname,list):
-            for cname in colname:
-                self.meanstdnorm(cname)
-        else:
-            a=self[:][colname]
-            a=np.array(a)
-            mean=np.mean(a)
-            std=np.std(a)
-            final=(a-mean)/std
-            self[:][colname]=list(final)
-
-    def sum1norm(self,colname):
-        if isinstance(colname,list):
-            for cname in colname:
-                self.sum1norm(cname)
-        else:
-            a=self[:][colname]
-            a=np.array(a)
-            total=np.sum(a)
-            final=a/total
-            self[:][colname]=list(final)
-
-    def logwash(self,colname):
-        if isinstance(colname,list):
-            for cname in colname:
-                self.logwash(cname)
-        else:
-            a=self[:][colname]
-            a=np.array(a)
-            final=np.log(a)
-            self[:][colname]=list(final)
-
-    def abswash(self,colname):
-        if isinstance(colname,list):
-            for cname in colname:
-                self.abswash(cname)
-        else:
-            a=self[:][colname]
-            a=np.array(a)
-            final=np.abs(a)
-            self[:][colname]=list(final)
-
-    def sqrtwash(self,colname):
-        if isinstance(colname,list):
-            for cname in colname:
-                self.sqrtwash(cname)
-        else:
-            a=self[:][colname]
-            a=np.array(a)
-            final=np.sqrt(a)
-            self[:][colname]=list(final)
-
-    def invwash(self,colname):
-        if isinstance(colname,list):
-            for cname in colname:
-                self.invwash(cname)
-        else:
-            a=self[:][colname]
-            #do not use nan in data it will treated as True
-            good = all(a)
-            if not good:
-                raise Exception("contain '0' type value at col[{}]".format(colname))
-            a=np.array(a)
-            final=1/a
-            self[:][colname]=list(final)
-
-    def epswash(self,colname,eps=0.1):
-        if isinstance(colname,list):
-            for cname in colname:
-                self.epswash(cname)
-        else:
-            a=self[:][colname]
-            a=np.array(a)
-            final=a+eps
-            self[:][colname]=list(final)
-
-    #=============================machine learning==================================
-    kernel=lambda x:x
-
-    kernel_support_types={'int32','int64','float32','float64'}
-    def getinvkernel(X):
-        if X.dtype.name not in Table.kernel_support_types:
-            raise Exception("only {} is supported".format(Table.kernel_support_types))
-        #check non zero col num
-        rx=X.T
-        goodcol=[]
-        for i in range(len(rx)):
-            if all(rx[i]):
-                goodcol.append(i)
-        collect=[]
-        for index in goodcol:
-            collect.append(1/rx[index])
-        collect=np.array(collect).T
-
-        return collect
-
-    def getlogkernel(X):
-        if X.dtype.name not in Table.kernel_support_types:
-            raise Exception("only {} is supported".format(Table.kernel_support_types))
-        #check non zero col num
-        rx=X.T
-        goodcol=[]
-        for i in range(len(rx)):
-            if np.min(rx[i])>0:
-                goodcol.append(i)
-        collect=[]
-        for index in goodcol:
-            collect.append(np.log(rx[index]))
-        collect=np.array(collect).T
-        #print(collect)
-        return collect
-
-    def kerneladd(a,b):
-        return np.concatenate((a,b), axis=1)
-
-    def kernelmul(X, A):
-        k = []
-        for i in range(len(X)):
-            v = X[i]
-            u = A[i]
-
-            v.shape = v.shape[0], 1
-            u.shape = u.shape[0], 1
-            sub = v * u.T
-            sub.shape = (sub.shape[0] * sub.shape[1],)
-            k.append(sub)
-        k = np.array(k)
-        return k
-
-    def makekernel(X, invmul=True, inv=False, log=False, poly=None):
-
-        more=[]
-        if inv or invmul:
-            down= Table.getinvkernel(X)
-            if inv:
-                more.append(down)
-            if invmul:
-                sub = Table.kernelmul(X, down)
-                more.append(sub)
-        if log:
-            more.append(Table.getlogkernel(X))
-        if poly:
-            sub=X
-            for i in range(poly):
-                sub=Table.kernelmul(sub,X)
-                more.append(sub)
-
-        resX=X
-        for E in more:
-            resX=Table.kerneladd(resX,E)
-
-        return resX
-
-    def setkernel(inv=False, invmul=False, log=False, poly=None):
-        def kernel(X):
-            res=Table.makekernel(X, inv=inv, invmul=invmul, log=log, poly=poly)
-            return res
-        Table.kernel=kernel
-        return kernel
-
-    #============================classify=========================================
-    def classify_learning(self, features, label, model, test_size=0.33, show=True):
-        #features is list of colnames
-        if not isinstance(features,list):
-            features=[features]
-
-        if isinstance(label,list):
-            print("you give a list but algo only learn the first argument as label")
-            label=label[0]
-
-        ofdata=np.array(self[:][features])
-        fdata = Table.kernel(ofdata)
-        if show:
-            print("kernel shape: {}→{}".format(ofdata.shape, fdata.shape))
-        ldata=np.array(self[:][label]).astype(int)
-        Xtrain, Xtest, ytrain, ytest = tts(fdata, ldata, test_size=test_size, random_state=42)
-
-        clf=model.fit(Xtrain,ytrain)
-        score = clf.score(Xtest, ytest)
-        if show:
-            print("accuracy:{}".format(score))
-        def predictor(Xdata):
-            if isinstance(Xdata,Table):
-                Xdata = np.array(t[:][features])
-            elif isinstance(Xdata,list) or isinstance(Xdata,np.array):
-                Xdata=np.array(Xdata)
-                if len(Xdata.shape)==1:
-                    raise Exception("Xdata should be 2d")
-            else:
-                raise Exception("Xdata should be 2d")
-            Xdata=Table.kernel(Xdata)
-            result=clf.predict(Xdata)
-            result=list(result)
-            return result
-        predictor.score=score
-        return predictor
-
-    #===============================regression=========================================
-    def regression_score(ypred,ytest):
-        dis=np.abs(ypred-ytest)
-        u=dis.mean()
-        m=dis.max()
-        return u,m
-
-    def regression_learning(self, features, label, model, test_size=0.33, show=True):
-        #features is list of colnames
-        if not isinstance(features,list):
-            features=[features]
-
-        if isinstance(label,list):
-            print("you give a list but algo only learn the first argument as label")
-            label=label[0]
-
-        ofdata=np.array(self[:][features])
-        fdata = Table.kernel(ofdata)
-        if show:
-            print("kernel shape: {}→{}".format(ofdata.shape, fdata.shape))
-        ldata=np.array(self[:][label]).astype(int)
-        Xtrain, Xtest, ytrain, ytest = tts(fdata, ldata, test_size=test_size, random_state=42)
-
-        clf = model.fit(Xtrain, ytrain)
-        #ytest
-        ypred = clf.predict(Xtest)
-        score=Table.regression_score(ypred,ytest)
-        if show:
-            print("ave:{}\nmax:{}".format(score[0],score[1]))
-        #
-        def predictor(Xdata):
-            if isinstance(Xdata,Table):
-                Xdata = np.array(t[:][features])
-            elif isinstance(Xdata,list) or isinstance(Xdata,np.array):
-                Xdata=np.array(Xdata)
-                if len(Xdata.shape)==1:
-                    raise Exception("Xdata should be 2d")
-            else:
-                raise Exception("Xdata should be 2d")
-            Xdata=Table.kernel(Xdata)
-            result=clf.predict(Xdata)
-            result=list(result)
-            return result
-        predictor.score=score
-        return predictor
 
     #==============================apply & extend function part =======================
     def apply(self, key, fparamod=None, f=None, *args,**kwargs):
