@@ -1,14 +1,18 @@
 # Lazy-Python
-An extreme easy python local data base
+An simple python local data base
 
 # how to install
+
+```
 pip install lzpy
+```
 
 # how to use
-from lzdb import *
 
-Table.coding = "gb18030"
-
-t=Table.read("测试样本")
+```
+from lzpy import Table
+Table.encoding = "utf-8" # choose encoding format
+t=Table.read("filename") # no '.csv'
+```
 
 # introduction
