@@ -20,9 +20,6 @@ t=Table.read("filename") # no '.csv'
 read and save
 
 ![alt text](https://raw.githubusercontent.com/moenova/Lazy-Python/master/imgs/read.jpg)
-
 ![alt text](https://raw.githubusercontent.com/moenova/Lazy-Python/master/imgs/save.jpg)
-
-
 ![alt text](https://raw.githubusercontent.com/moenova/Lazy-Python/master/imgs/code_of_visualize.jpg)
 ![alt text](https://raw.githubusercontent.com/moenova/Lazy-Python/master/imgs/visualize.png)
