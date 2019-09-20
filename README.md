@@ -24,15 +24,15 @@ t=Table.read("filename") # if filename is "data.csv" write "data" inside parenth
 ## Read and Save
 ![alt text](https://raw.githubusercontent.com/moenova/Lazy-Python/master/imgs/read.png)
 ![alt text](https://raw.githubusercontent.com/moenova/Lazy-Python/master/imgs/save.png)
-
 ***
+
 ## See Data In Console
 ![alt text](https://raw.githubusercontent.com/moenova/Lazy-Python/master/imgs/see1.png)
 ![alt text](https://raw.githubusercontent.com/moenova/Lazy-Python/master/imgs/see2.png)
 ![alt text](https://raw.githubusercontent.com/moenova/Lazy-Python/master/imgs/see3.png)
 ![alt text](https://raw.githubusercontent.com/moenova/Lazy-Python/master/imgs/see4.png)
 ![alt text](https://raw.githubusercontent.com/moenova/Lazy-Python/master/imgs/see5.png)
-***
+===
 
 ## Get Set Del
 ![alt text](https://raw.githubusercontent.com/moenova/Lazy-Python/master/imgs/access1.png)
@@ -41,7 +41,6 @@ t=Table.read("filename") # if filename is "data.csv" write "data" inside parenth
 ![alt text](https://raw.githubusercontent.com/moenova/Lazy-Python/master/imgs/access4.png)
 ![alt text](https://raw.githubusercontent.com/moenova/Lazy-Python/master/imgs/access5.png)
 ![alt text](https://raw.githubusercontent.com/moenova/Lazy-Python/master/imgs/access6.png)
-
 ===
 
 ## SQL
