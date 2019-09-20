@@ -17,7 +17,7 @@ t=Table.read("filename") # no '.csv'
 
 # Introduction
 
---read and save
+read and save
 
 ![alt text](https://raw.githubusercontent.com/moenova/Lazy-Python/master/imgs/read.jpg)
 
