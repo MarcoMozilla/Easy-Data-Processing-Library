@@ -55,3 +55,7 @@ t=Table.read("filename") # if filename is "data.csv" write "data" inside parenth
 ## Easy Visualize
 ![alt text](https://raw.githubusercontent.com/moenova/Lazy-Python/master/imgs/code_of_visualize.png)
 ![alt text](https://raw.githubusercontent.com/moenova/Lazy-Python/master/imgs/visualize.jpg)
+
+## Detail Explain
+https://docs.google.com/document/d/1tVRnCeYv3HvovK7V4Kn4B88EiWz5fmKiA_FgrsXdAAk/edit
+
