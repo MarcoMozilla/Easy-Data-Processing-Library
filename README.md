@@ -40,7 +40,7 @@ t=Table.read("filename") # if filename is "data.csv" write "data" inside parenth
 ![alt text](https://raw.githubusercontent.com/moenova/Lazy-Python/master/imgs/access3.png)
 ![alt text](https://raw.githubusercontent.com/moenova/Lazy-Python/master/imgs/access4.png)
 ![alt text](https://raw.githubusercontent.com/moenova/Lazy-Python/master/imgs/access5.png)
-![alt text](https://raw.githubusercontent.com/moenova/Lazy-Python/master/imgs/access6.png)
+![alt text](https://raw.githubusercontent.com/moenova/Lazy-Python/master/imgs/access6.jpg)
 
 ===
 
