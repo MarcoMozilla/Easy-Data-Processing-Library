@@ -1,5 +1,5 @@
 # Lazy-Python
-An simple python local data base
+An simple python local data base support utf-8, ASCII, GBK etc.
 
 # How to install
 
