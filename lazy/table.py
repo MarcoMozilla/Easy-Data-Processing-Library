@@ -6,7 +6,6 @@ from .mpl_interaction import PanAndZoom as paz
 from mpl_toolkits.mplot3d import Axes3D
 from matplotlib.font_manager import FontManager
 from matplotlib.font_manager import FontProperties
-from scipy.interpolate import spline
 from cycler import cycler
 
 import matplotlib as mpl
@@ -188,7 +187,7 @@ class Table:
             print("SAVE <{}> TO {} takes {}".format(self.name, fname,round(t2-t1,Table.precision)))
         return
 
-    def savea(self,show=False):
+    def savea(self,name,show=False):
         t1 = time.time()
         if self.name is None and name is None:
             raise Exception("give a name for the array2d to save")
@@ -1265,7 +1264,6 @@ class Table:
 
     def getax():
         return Table.ax
-
     
 
     def setfig(row,col,figsize=None,adjust=[0.1,0.1,0.9,0.9,0.5,0.5]):
@@ -1335,13 +1333,10 @@ class Table:
             ax.legend(handles=hds,prop=Table.fontprop,fontsize=Table.fontsize)
         mpl.rcParams["axes.prop_cycle"] = store
 
-    def smooth(x,y,num):
-        xs = np.linspace(min(x),max(x),int(num*len(x)))
-        ys = spline(x,y,xs)
-        return xs,ys
 
 
-    def plot(self, xname, yname, title=None, legend=None, smoothindex = None, new=True, **kwargs):
+
+    def plot(self, xname, yname, title=None, legend=None, new=True, **kwargs):
         ax=Table._preplot(new)
 
         store = mpl.rcParams["axes.prop_cycle"]
@@ -1357,11 +1352,8 @@ class Table:
             
         if not isinstance(yname, list):
 
-            if smoothindex is None:
-                ax.plot(self[:][xname], self[:][yname], **kwargs)
-            else:
-                xs,ys = Table.smooth(self[:][xname], self[:][yname], smoothindex)
-                ax.plot(xs,ys,**kwargs)
+            xs,ys = Table.smooth(self[:][xname], self[:][yname], smoothindex)
+            ax.plot(xs,ys,**kwargs)
             
             #font properties at next line will change font of xname ticks
             #ax.set_xticklabels(self[:][xname], fontsize=Table.fontsize)
