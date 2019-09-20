@@ -16,22 +16,32 @@ t=Table.read("filename") # no '.csv'
 ```
 
 # Introduction
-
+***
 ## data preview .csv
-
 ![alt text](https://raw.githubusercontent.com/moenova/Lazy-Python/master/imgs/data.png)
 
+***
 ## read and save
 ![alt text](https://raw.githubusercontent.com/moenova/Lazy-Python/master/imgs/read.png)
 ![alt text](https://raw.githubusercontent.com/moenova/Lazy-Python/master/imgs/save.png)
 
-## SQL-like python
+***
+## see data in console
+![alt text](https://raw.githubusercontent.com/moenova/Lazy-Python/master/imgs/see1.png)
+![alt text](https://raw.githubusercontent.com/moenova/Lazy-Python/master/imgs/see2.png)
+![alt text](https://raw.githubusercontent.com/moenova/Lazy-Python/master/imgs/see3.png)
+![alt text](https://raw.githubusercontent.com/moenova/Lazy-Python/master/imgs/see4.png)
+![alt text](https://raw.githubusercontent.com/moenova/Lazy-Python/master/imgs/see5.png)
+***
+
+## SQL
 ![alt text](https://raw.githubusercontent.com/moenova/Lazy-Python/master/imgs/sql1.png)
 ![alt text](https://raw.githubusercontent.com/moenova/Lazy-Python/master/imgs/sql2.png)
 ![alt text](https://raw.githubusercontent.com/moenova/Lazy-Python/master/imgs/sql3.png)
 ![alt text](https://raw.githubusercontent.com/moenova/Lazy-Python/master/imgs/sql4.png)
 ![alt text](https://raw.githubusercontent.com/moenova/Lazy-Python/master/imgs/sql5.png)
 
+***
 ## visualize
 ![alt text](https://raw.githubusercontent.com/moenova/Lazy-Python/master/imgs/code_of_visualize.png)
 ![alt text](https://raw.githubusercontent.com/moenova/Lazy-Python/master/imgs/visualize.jpg)
