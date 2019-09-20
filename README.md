@@ -1,13 +1,13 @@
 # Lazy-Python
 An simple python local data base
 
-# how to install
+# How to install
 
 ```
 pip install lzpy
 ```
 
-# how to use
+# How to use
 
 ```
 from lzpy import Table
@@ -15,4 +15,8 @@ Table.encoding = "utf-8" # choose encoding format
 t=Table.read("filename") # no '.csv'
 ```
 
-# introduction
+# Introduction
+
+read and save
+
+![alt text](https://raw.githubusercontent.com/moenova/Lazy-Python/master/imgs/end.jpg)
