@@ -12,6 +12,7 @@ pip install lzpy
 ```
 from lzpy import Table
 Table.encoding = "utf-8" # choose encoding format
+Table.delimiter = "\t"    # choose the seperator of .csv format such as ","
 t=Table.read("filename") # if filename is "data.csv" write "data" inside parentheses
 ```
 
