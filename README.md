@@ -17,16 +17,16 @@ t=Table.read("filename") # if filename is "data.csv" write "data" inside parenth
 
 # Introduction
 ***
-## data preview .csv
+## Preview data.csv
 ![alt text](https://raw.githubusercontent.com/moenova/Lazy-Python/master/imgs/data.png)
 
 ***
-## read and save
+## Read and Save
 ![alt text](https://raw.githubusercontent.com/moenova/Lazy-Python/master/imgs/read.png)
 ![alt text](https://raw.githubusercontent.com/moenova/Lazy-Python/master/imgs/save.png)
 
 ***
-## see data in console
+## See Data In Console
 ![alt text](https://raw.githubusercontent.com/moenova/Lazy-Python/master/imgs/see1.png)
 ![alt text](https://raw.githubusercontent.com/moenova/Lazy-Python/master/imgs/see2.png)
 ![alt text](https://raw.githubusercontent.com/moenova/Lazy-Python/master/imgs/see3.png)
@@ -42,6 +42,6 @@ t=Table.read("filename") # if filename is "data.csv" write "data" inside parenth
 ![alt text](https://raw.githubusercontent.com/moenova/Lazy-Python/master/imgs/sql5.png)
 
 ***
-## visualize
+## Easy Visualize
 ![alt text](https://raw.githubusercontent.com/moenova/Lazy-Python/master/imgs/code_of_visualize.png)
 ![alt text](https://raw.githubusercontent.com/moenova/Lazy-Python/master/imgs/visualize.jpg)
